@@ -1,11 +1,11 @@
 import os
 
-from src.db_cache import SQLiteDB, ScraperTypes
+from src.db_cache import SQLiteDB
 from src.logger import create_logger_from_designated_logger
 from src.parser.jsonParser import get_group_package
 from src.publishers.mobilizon.api import logger
 from src.scrapers.abc_scraper import Scraper
-from src.parser.types.submission_handlers import GroupEventsKernel, EventsToUploadFromCalendarID
+from src.parser.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
 from src.parser.types.generics import GenericEvent
 from src.scrapers.google_calendar.api import GCalAPI
 
@@ -28,7 +28,7 @@ class GoogleCalendarScraper(Scraper):
         if not self.cache_db.no_entries_with_source_id(google_calendar_id):
             last_uploaded_event_date = self.cache_db.get_last_event_date_for_source_id(google_calendar_id)
 
-        events: [GenericEvent] = self.google_calendar_api.getAllEventsAWeekFromNow(
+        events: list[GenericEvent] = self.google_calendar_api.getAllEventsAWeekFromNow(
             calendarId=google_calendar_id, eventKernel=group_kernel.event_template,
             checkCacheFunction=self.cache_db.entry_already_in_cache,
             dateOfLastEventScraped=last_uploaded_event_date)
@@ -36,10 +36,10 @@ class GoogleCalendarScraper(Scraper):
         return events
 
 
-    def retrieve_from_source(self, group_event_kernel: GroupEventsKernel) -> [EventsToUploadFromCalendarID]:
+    def retrieve_from_source(self, group_event_kernel: GroupEventsKernel) -> list[EventsToUploadFromCalendarID]:
 
 
-        all_events: [EventsToUploadFromCalendarID] = []
+        all_events: list[EventsToUploadFromCalendarID] = []
         logger.info(f"Getting events from calendar {group_event_kernel.group_name}")
         for google_calendar_id in group_event_kernel.calendar_ids:
             events = self._get_specific_calendar_events(google_calendar_id, group_event_kernel)
@@ -52,10 +52,10 @@ class GoogleCalendarScraper(Scraper):
     # Used Mostly for Testing ##
     ############################
     def get_gcal_events_for_specific_group_and_upload_them(self, calendar_group: str):
-        google_calendars: [GroupEventsKernel] = get_group_package(f"{os.getcwd()}/src/scrapers/GCal.json")
+        google_calendars: list[GroupEventsKernel] = get_group_package(f"{os.getcwd()}/src/scrapers/GCal.json")
         logger.info(f"\nGetting events from calendar {calendar_group}")
         gCal: GroupEventsKernel
-        all_events: [GenericEvent] = []
+        all_events: list[GenericEvent] = []
         for gCal in google_calendars:
             if gCal.group_name == calendar_group:
                 for googleCalendarID in gCal.calendar_ids:
@@ -72,6 +72,3 @@ class GoogleCalendarScraper(Scraper):
             self.google_calendar_api.init_calendar_read_client_browser(token_path)
         else:
             self.google_calendar_api.init_calendar_read_client_adc()
-
-    def _convert_scrapped_info_to_upload(self):
-        pass

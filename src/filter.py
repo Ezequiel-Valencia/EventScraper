@@ -2,11 +2,11 @@ import requests
 import validators
 
 from src.parser.types.generics import GenericEvent
-from src.parser.types.submission_handlers import EventsToUploadFromCalendarID
+from src.parser.types.submission import EventsToUploadFromCalendarID
 
 # https://www.geeksforgeeks.org/http-headers-content-type/
 
-def normalize_generic_event(events_to_upload_list: [EventsToUploadFromCalendarID]):
+def normalize_generic_event(events_to_upload_list: list[EventsToUploadFromCalendarID]):
     allowed_image_content_type_header = ["image/gif", "image/jpeg", "image/png"]
     for events_to_upload in events_to_upload_list:
         generic_event: GenericEvent

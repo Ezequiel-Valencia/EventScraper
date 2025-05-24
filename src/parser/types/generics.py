@@ -37,6 +37,8 @@ class GenericAddress:
         country_region_timezone: bool = other.country == self.country and other.region == self.region and other.timezone == self.timezone
         return local_postal_street and country_region_timezone and other.geom == self.geom and other.description == self.description
 
+    def __str__(self):
+        return f"{self.geom}, {self.locality}, {self.postalCode}, {self.street}, {self.region}"
 
 class GenericEvent:
     """
@@ -66,6 +68,10 @@ class GenericEvent:
         self.physical_address = physical_address
         self.picture = picture
 
+    @classmethod
+    def default(cls):
+        return cls(None, None, None)
+
     def __eq__(self, other):
         if type(other) != GenericEvent:
             return False
@@ -74,3 +80,8 @@ class GenericEvent:
             time_and_address: bool = other.ends_on == self.ends_on and other.begins_on == self.begins_on and other.online_address == self.online_address and other.phone_address == self.phone_address and other.physical_address == self.physical_address
             description_and_title: bool = other.title == self.title and other.description == self.description
             return time_and_address and description_and_title and other.publisher_specific_info == self.publisher_specific_info
+
+    def __str__(self):
+        return f"Title: {self.title}, Begins On: {self.begins_on}, Ends On: {self.ends_on}\nDescription: {self.description}\nAddress: {self.physical_address}\nPicture URL: {self.picture}"
+
+

@@ -1,8 +1,8 @@
 import os
 import unittest
 
-from src.db_cache import SQLiteDB, ScraperTypes
-from src.parser.types.submission_handlers import GroupEventsKernel, EventsToUploadFromCalendarID
+from src.db_cache import SQLiteDB
+from src.parser.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
 from src.parser.types.generics import GenericAddress, GenericEvent
 from src.scrapers.ical.scraper import ICALScraper
 
@@ -22,7 +22,7 @@ class TestICALScraper(unittest.TestCase):
                             ["https://kernels.ctgrassroots.org/test-json/test.ical"],
                                         ScraperTypes.ICAL, "")
 
-        retrieved: [EventsToUploadFromCalendarID] = ical_scraper.retrieve_from_source(test_kernel)
+        retrieved: list[EventsToUploadFromCalendarID] = ical_scraper.retrieve_from_source(test_kernel)
         event_to_upload : EventsToUploadFromCalendarID = retrieved[0]
         event: GenericEvent = event_to_upload.events[0]
 

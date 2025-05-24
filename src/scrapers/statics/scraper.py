@@ -1,9 +1,8 @@
 import copy
 from datetime import datetime, timedelta
 
-from src.db_cache import ScraperTypes
 from src.logger import create_logger_from_designated_logger
-from src.parser.types.submission_handlers import GroupEventsKernel, EventsToUploadFromCalendarID
+from src.parser.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
 from src.parser.types.generics import GenericEvent
 from src.scrapers.abc_scraper import Scraper
 
@@ -14,9 +13,6 @@ class StaticScraper(Scraper):
 
     def get_source_type(self):
         return ScraperTypes.STATIC
-
-    def _convert_scrapped_info_to_upload(self):
-        pass
 
     def connect_to_source(self):
         pass

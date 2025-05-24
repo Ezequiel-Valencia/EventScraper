@@ -6,9 +6,9 @@ from datetime import datetime, timedelta, timezone, date
 import icalendar
 from icalendar.cal import Calendar
 
-from src.db_cache import SQLiteDB, ScraperTypes
+from src.db_cache import SQLiteDB
 from src.logger import create_logger_from_designated_logger
-from src.parser.types.submission_handlers import GroupEventsKernel, EventsToUploadFromCalendarID
+from src.parser.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
 from src.parser.types.generics import GenericAddress, GenericEvent
 from src.publishers.mobilizon.api import logger
 from src.scrapers.abc_scraper import Scraper, find_geolocation_from_address
@@ -28,8 +28,8 @@ class ICALScraper(Scraper):
         super().__init__(cache_db)
         self.cache_db = cache_db
 
-    def retrieve_from_source(self, group_event_kernel: GroupEventsKernel) -> [EventsToUploadFromCalendarID]:
-        all_events: [EventsToUploadFromCalendarID] = []
+    def retrieve_from_source(self, group_event_kernel: GroupEventsKernel) -> list[EventsToUploadFromCalendarID]:
+        all_events: list[EventsToUploadFromCalendarID] = []
         logger.info(f"Getting events from calendar {group_event_kernel.group_name}")
         for ical_id in group_event_kernel.calendar_ids:
             with urllib.request.urlopen(ical_id) as f:
@@ -46,11 +46,8 @@ class ICALScraper(Scraper):
     def connect_to_source(self):
         pass
 
-    def _convert_scrapped_info_to_upload(self):
-        pass
 
-
-def _hydrate_event_template(calendar: Calendar, event_kernel: GenericEvent) -> [GenericEvent]:
+def _hydrate_event_template(calendar: Calendar, event_kernel: GenericEvent) -> list[GenericEvent]:
     week_from_now = datetime.now(timezone.utc) + timedelta(days=7)
     events = []
     for event in calendar.walk('VEVENT'):
