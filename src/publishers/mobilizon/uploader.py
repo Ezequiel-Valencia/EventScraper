@@ -59,7 +59,7 @@ class MobilizonUploader(Publisher):
                                                      source=source_id, source_type=event_kernel.scraper_type)
                         self.cache_db.insert_uploaded_event(upload_row, upload_source)
                 except Exception as e:
-                    logger.error(f"Unable to upload the following event: {event}")
+                    logger.error(f"Unable to upload the following event: {event}", e)
 
 
     def connect(self):

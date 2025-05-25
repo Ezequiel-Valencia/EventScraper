@@ -1,15 +1,18 @@
 import datetime
+from datetime import timezone, tzinfo
 
+import pytz
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 
-from src.db_cache import SQLiteDB
+from src.logger import create_logger_from_designated_logger
 from src.parser.types.generics import GenericEvent, GenericAddress
 from src.parser.types.submission import EventsToUploadFromCalendarID, GroupEventsKernel, ScraperTypes
 from src.publishers.mobilizon.types import EventParameters
 from src.scrapers.abc_scraper import Scraper
 
+
+logger = create_logger_from_designated_logger(__name__)
 
 class Cafe9Scraper(Scraper):
     headers = {
@@ -24,6 +27,7 @@ class Cafe9Scraper(Scraper):
         pass
 
     def retrieve_from_source(self, event_kernel) -> list[EventsToUploadFromCalendarID]:
+        logger.info("Getting Events From Cafe 9")
         response = requests.get(Cafe9Scraper.url, headers=Cafe9Scraper.headers)
         response.raise_for_status()  # Raise an error for bad status codes
 
@@ -64,14 +68,17 @@ class Cafe9Scraper(Scraper):
         for i in range(len(second_divs_text)):
             if i == 0:
                 clean_text = second_divs_text[i].get_text(strip=True).rsplit(" ", 1)[0]
-                event.begins_on = datetime.datetime.strptime(clean_text,
-                                                             '%A, %B %d, %Y at %I:%M %p').isoformat()
+                time = datetime.datetime.strptime(clean_text,
+                                                             '%A, %B %d, %Y at %I:%M %p')
+                event.begins_on = pytz.timezone("America/New_York").localize(time).isoformat()
             event.description += f'{second_divs_text[i].get_text()}\n'
 
         event.title = main_div.find('h2').get_text()
         event.online_address = Cafe9Scraper.url + href
         event.physical_address = GenericAddress(
-            geom="41.30377450753123, -72.9238838019238", locality="New Haven", postalCode="06510",
+            geom="-72.9238838019238;41.30377450753123", locality="New Haven", postalCode="06510",
         street="250 State St", region="CT")
-        event.publisher_specific_info = {"mobilizon": {"defaultCategory": EventParameters.Categories.music, "defaultTags": ["bar"]}}
+        event.publisher_specific_info = {"mobilizon":
+            {"defaultCategory": EventParameters.Categories.music.value.lower(), "defaultTags": ["bar"], "groupID": 14}
+        }
         return event

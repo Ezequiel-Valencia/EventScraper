@@ -6,8 +6,10 @@ from src.scrapers.abc_scraper import Scraper
 
 
 class RunnerSubmission:
+    respective_scrapers: {ScraperTypes: Scraper}
+    publishers: {Publisher: list[GroupPackage]}
     def __init__(self, submitted_db: SQLiteDB,
-                 submitted_publishers: {Publisher: [GroupPackage]},
+                 submitted_publishers: {Publisher: list[GroupPackage]},
                  test: bool,
                  respective_scrapers: {ScraperTypes: Scraper}):
         self.cache_db = submitted_db
