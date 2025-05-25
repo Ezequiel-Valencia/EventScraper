@@ -75,7 +75,7 @@ class GCalAPI:
 
     def getAllEventsAWeekFromNow(self, eventKernel: GenericEvent, calendarId: str,
                                  checkCacheFunction,
-                                 dateOfLastEventScraped: datetime = None) -> [GenericEvent]:
+                                 dateOfLastEventScraped: datetime = None) -> list[GenericEvent]:
         """Get events all events for that specific calender a week from today.
 
         Args:

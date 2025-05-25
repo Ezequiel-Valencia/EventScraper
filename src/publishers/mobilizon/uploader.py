@@ -5,7 +5,7 @@ from aiohttp import ClientError
 
 from src.db_cache import UploadedEventRow, UploadSource, SQLiteDB
 from src.logger import create_logger_from_designated_logger
-from src.parser.types.submission_handlers import EventsToUploadFromCalendarID
+from src.parser.types.submission import EventsToUploadFromCalendarID
 from src.parser.types.generics import GenericEvent
 from src.publishers.abc_publisher import Publisher
 from src.publishers.mobilizon.api import MobilizonAPI
@@ -31,7 +31,7 @@ class MobilizonUploader(Publisher):
         if not self.testMode:
             self.mobilizonAPI.logout()
 
-    def upload(self, groups_events_to_upload: [EventsToUploadFromCalendarID]):
+    def upload(self, groups_events_to_upload: list[EventsToUploadFromCalendarID]):
         for events_to_upload in groups_events_to_upload:
             all_events = events_to_upload.events
             event_kernel = events_to_upload.eventKernel
@@ -59,7 +59,7 @@ class MobilizonUploader(Publisher):
                                                      source=source_id, source_type=event_kernel.scraper_type)
                         self.cache_db.insert_uploaded_event(upload_row, upload_source)
                 except Exception as e:
-                    logger.error(f"Unable to upload the following event: {event}")
+                    logger.error(f"Unable to upload the following event: {event}", e)
 
 
     def connect(self):

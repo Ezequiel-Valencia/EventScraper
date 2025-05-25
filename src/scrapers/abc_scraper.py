@@ -6,14 +6,15 @@ from geopy.exc import GeocoderTimedOut
 from src.db_cache import SQLiteDB
 from src.logger import create_logger_from_designated_logger
 from src.parser.types.generics import GenericAddress
+from src.parser.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
 
 logger = create_logger_from_designated_logger(__name__)
 
 
-def _generate_args(localVariables: dict) -> dict:
+def _generate_args(local_variables: dict) -> dict:
     args = {}
-    for name, value in localVariables.items():
-        if (value is not None and name != "self" and name != "__class__"):
+    for name, value in local_variables.items():
+        if value is not None and name != "self" and name != "__class__":
             args[name] = value
     return args
 
@@ -41,18 +42,15 @@ class Scraper(ABC):
     cache_db: SQLiteDB
     def __init__(self, cache_db):
         pass
-    @abstractmethod
-    def _convert_scrapped_info_to_upload(self):
-        pass
 
     @abstractmethod
     def connect_to_source(self):
         pass
 
     @abstractmethod
-    def retrieve_from_source(self, event_kernel):
+    def retrieve_from_source(self, event_kernel: GroupEventsKernel) -> list[EventsToUploadFromCalendarID]:
         """
-        Takes GroupEventKernel and returns [EventsToUploadFromCalendarID]
+        Takes GroupEventKernel and returns list[EventsToUploadFromCalendarID]
         """
         pass
 
@@ -61,7 +59,7 @@ class Scraper(ABC):
         pass
 
     @abstractmethod
-    def get_source_type(self):
+    def get_source_type(self) -> ScraperTypes:
         pass
 
 

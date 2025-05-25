@@ -1,7 +1,10 @@
-from src.db_cache import SQLiteDB, UploadedEventRow, UploadSource, ScraperTypes
+from src.db_cache import SQLiteDB, UploadedEventRow, UploadSource
 import sqlite3
 import os
 import unittest
+
+from src.parser.types.submission import ScraperTypes
+
 
 # TODO: Test getting the last event uploaded for a specific group
 

@@ -2,32 +2,44 @@ import datetime
 import os
 import time
 import traceback
-
 from urllib.error import HTTPError
+
 from slack_sdk.webhook import WebhookClient
 
 from src.db_cache import SQLiteDB
+from src.filter import normalize_generic_event
 from src.logger import create_logger_from_designated_logger
 from src.parser.jsonParser import get_runner_submission
-from src.parser.types.submission_handlers import GroupEventsKernel, GroupPackage, RunnerSubmission, EventsToUploadFromCalendarID
+from src.parser.types.submission import GroupEventsKernel, EventsToUploadFromCalendarID, GroupPackage
+from src.parser.types.submission_handlers import RunnerSubmission
 from src.publishers.abc_publisher import Publisher
+from src.scrapers.Websites.cafe9 import Cafe9Scraper
 from src.scrapers.abc_scraper import Scraper
 from src.scrapers.google_calendar.api import ExpiredToken
-from src.filter import normalize_generic_event
 
 logger = create_logger_from_designated_logger(__name__)
 
 
-def runner(runner_submission: RunnerSubmission):
+def runner(runner_submission: RunnerSubmission, custom_scrapers: list[Scraper] = None):
     continue_scraping = True
     num_retries = 0
     theres_an_expired_token = False
     while continue_scraping and num_retries < 5:
         try:
-            submitted_publishers: {Publisher: [GroupPackage]} = runner_submission.publishers
+            submitted_publishers: {Publisher: list[GroupPackage]} = runner_submission.publishers
             for publisher in submitted_publishers.keys():
                 publisher: Publisher
                 publisher.connect()
+                if custom_scrapers:
+                    for scraper in custom_scrapers:
+                        try:
+                            scraper.connect_to_source()
+                            events = scraper.retrieve_from_source(None)
+                            normalize_generic_event(events)
+                            publisher.upload(events)
+                        except Exception as err:
+                            logger.error("Exception for custom scraper: " + scraper.__class__.__name__, err)
+
                 group_package: GroupPackage
                 for group_package in submitted_publishers[publisher]:
                     logger.info(f"Reading Group Package: {group_package.package_name}")
@@ -36,12 +48,12 @@ def runner(runner_submission: RunnerSubmission):
                         scraper: Scraper = runner_submission.respective_scrapers[scraper_type]
                         try:
                             scraper.connect_to_source()
-                            group_event_kernels: [GroupEventsKernel] = group_package.scraper_type_and_kernels[
+                            group_event_kernels: list[GroupEventsKernel] = group_package.scraper_type_and_kernels[
                                 scraper_type]
                             for event_kernel in group_event_kernels:
                                 event_kernel: GroupEventsKernel
                                 try:
-                                    events: [EventsToUploadFromCalendarID] = scraper.retrieve_from_source(event_kernel)
+                                    events: list[EventsToUploadFromCalendarID] = scraper.retrieve_from_source(event_kernel)
                                 except HTTPError as err:
                                     if err.code == 404:
                                         logger.warning(f"The following group is no longer available: {event_kernel.group_name}")
@@ -117,7 +129,7 @@ if __name__ == "__main__":
         timeToSleep = days_to_sleep(sleeping)
         logger.info("Scraping")
         try:
-            runner(submission)
+            runner(submission, [Cafe9Scraper(None)])
             logger.info("Sleeping " + str(sleeping) + " Days Until Next Scrape")
         except ExpiredToken:
             timeToSleep = days_to_sleep(2)

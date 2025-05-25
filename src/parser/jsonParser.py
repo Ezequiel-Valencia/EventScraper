@@ -5,7 +5,7 @@ import urllib.request
 from src.logger import create_logger_from_designated_logger
 from src.parser.types.submission_handlers import *
 from src.parser.types.generics import GenericAddress, GenericEvent
-from src.scrapers.abc_scraper import Scraper
+from src.parser.types.submission import ScraperTypes, TimeInfo, GroupEventsKernel, GroupPackage, PublisherTypes
 from src.scrapers.ical.scraper import ICALScraper
 
 logger = create_logger_from_designated_logger(__name__)
@@ -22,6 +22,7 @@ def retrieve_source_type(source_type_string):
             return ScraperTypes.GOOGLE_CAL
         case "ICAL":
             return ScraperTypes.ICAL
+    raise TypeError("Expected a string that resolves to a scraper type, instead got: " + source_type_string)
 
 def get_group_package(json_path: str) -> GroupPackage:
     group_schema: dict = None
@@ -73,8 +74,10 @@ def get_runner_submission(test_mode, cache_db, submission_path=None) -> RunnerSu
     for publisher in json_submission.keys():
         publisher_instance: Publisher
         match publisher:
-            case "Mobilizon":
+            case PublisherTypes.MOBILIZON.value:
                 publisher_instance = MobilizonUploader(test_mode, cache_db)
+            case _:
+                raise TypeError("Expected publisher that is accepted, instead got: " + publisher)
         publisher_package[publisher_instance] = []
         for group_package_source_path in json_submission[publisher]:
             group_package: GroupPackage = get_group_package(group_package_source_path)

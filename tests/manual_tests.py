@@ -6,10 +6,10 @@ from datetime import timezone, timedelta, datetime
 from urllib.error import HTTPError
 from geopy.geocoders import Nominatim
 
-from src.db_cache import UploadedEventRow, SQLiteDB, UploadSource, ScraperTypes
+from src.db_cache import UploadedEventRow, SQLiteDB, UploadSource
 from src.parser.jsonParser import get_group_package
 from src.parser.types.generics import GenericEvent
-from src.parser.types.submission_handlers import GroupEventsKernel, GroupPackage
+from src.parser.types.submission import ScraperTypes, GroupEventsKernel, GroupPackage
 from src.publishers.mobilizon.api import MobilizonAPI
 from src.publishers.mobilizon.types import EventParameters, MobilizonEvent
 from src.scrapers.google_calendar.api import GCalAPI
