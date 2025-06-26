@@ -4,17 +4,17 @@ import time
 import traceback
 from urllib.error import HTTPError
 
+from event_scraper_generics.abc_publisher import Publisher
+from event_scraper_generics.abc_scraper import Scraper
+from event_scraper_generics.types.submission import GroupPackage, EventsToUploadFromCalendarID, GroupEventsKernel
 from slack_sdk.webhook import WebhookClient
 
 from src.db_cache import SQLiteDB
 from src.filter import normalize_generic_event
 from src.logger import create_logger_from_designated_logger
 from src.parser.jsonParser import get_runner_submission
-from src.parser.types.submission import GroupEventsKernel, EventsToUploadFromCalendarID, GroupPackage
 from src.parser.types.submission_handlers import RunnerSubmission
-from src.publishers.abc_publisher import Publisher
 from src.scrapers.Websites.cafe9 import Cafe9Scraper
-from src.scrapers.abc_scraper import Scraper
 from src.scrapers.google_calendar.api import ExpiredToken
 
 logger = create_logger_from_designated_logger(__name__)
@@ -61,7 +61,7 @@ def runner(runner_submission: RunnerSubmission, custom_scrapers: list[Scraper] =
                                         raise
                                 normalize_generic_event(events)
                                 publisher.upload(events)
-                            scraper.close()
+                            scraper.close_connection_to_source()
                         except ExpiredToken:
                             theres_an_expired_token = True
                             logger.warning("Expired token.json needs to be replaced. Will continue scraping other types")
@@ -129,7 +129,7 @@ if __name__ == "__main__":
         timeToSleep = days_to_sleep(sleeping)
         logger.info("Scraping")
         try:
-            runner(submission, [Cafe9Scraper(None)])
+            runner(submission, [Cafe9Scraper()])
             logger.info("Sleeping " + str(sleeping) + " Days Until Next Scrape")
         except ExpiredToken:
             timeToSleep = days_to_sleep(2)

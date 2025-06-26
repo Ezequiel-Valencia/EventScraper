@@ -1,20 +1,21 @@
 import datetime
-from datetime import timezone, tzinfo
 
 import pytz
 import requests
 from bs4 import BeautifulSoup
+from event_scraper_generics.abc_scraper import Scraper
+from event_scraper_generics.types.generics import GenericEvent, GenericAddress
+from event_scraper_generics.types.submission import GroupEventsKernel, ScraperTypes, EventsToUploadFromCalendarID
 
 from src.logger import create_logger_from_designated_logger
-from src.parser.types.generics import GenericEvent, GenericAddress
-from src.parser.types.submission import EventsToUploadFromCalendarID, GroupEventsKernel, ScraperTypes
 from src.publishers.mobilizon.types import EventParameters
-from src.scrapers.abc_scraper import Scraper
-
 
 logger = create_logger_from_designated_logger(__name__)
 
 class Cafe9Scraper(Scraper):
+    def close_connection_to_source(self) -> None:
+        pass
+
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
     }
@@ -41,11 +42,6 @@ class Cafe9Scraper(Scraper):
                 events.append(self.get_pages_content(a_tag['href']))
 
         return [EventsToUploadFromCalendarID(events, Cafe9Scraper.group_kernel, Cafe9Scraper.url)]
-
-
-
-    def close(self):
-        pass
 
     def get_source_type(self):
         pass

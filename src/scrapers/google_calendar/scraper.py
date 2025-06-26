@@ -1,25 +1,27 @@
 import os
 
+from event_scraper_generics.abc_scraper import Scraper
+from event_scraper_generics.types.generics import GenericEvent
+from event_scraper_generics.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
+
 from src.db_cache import SQLiteDB
 from src.logger import create_logger_from_designated_logger
 from src.parser.jsonParser import get_group_package
 from src.publishers.mobilizon.api import logger
-from src.scrapers.abc_scraper import Scraper
-from src.parser.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
-from src.parser.types.generics import GenericEvent
 from src.scrapers.google_calendar.api import GCalAPI
-
 
 logger = create_logger_from_designated_logger(__name__)
 
 class GoogleCalendarScraper(Scraper):
+    def close_connection_to_source(self) -> None:
+        self.google_calendar_api.close()
+
     def get_source_type(self):
         return ScraperTypes.GOOGLE_CAL
 
     google_calendar_api: GCalAPI
     cache_db: SQLiteDB
     def __init__(self, cache_db: SQLiteDB):
-        super().__init__(cache_db)
         self.cache_db = cache_db
         self.google_calendar_api = GCalAPI()
 
@@ -61,9 +63,6 @@ class GoogleCalendarScraper(Scraper):
                 for googleCalendarID in gCal.calendar_ids:
                     all_events += self._get_specific_calendar_events(googleCalendarID, gCal)
         return all_events
-
-    def close(self):
-        self.google_calendar_api.close()
 
     def connect_to_source(self):
         use_oidc = os.environ.get("USE_OIDC_TOKEN")

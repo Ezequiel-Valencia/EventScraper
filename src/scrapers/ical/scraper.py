@@ -4,28 +4,29 @@ import urllib.request
 from datetime import datetime, timedelta, timezone, date
 
 import icalendar
+import validators
+from event_scraper_generics.abc_scraper import Scraper
+from event_scraper_generics.types.generics import GenericAddress, GenericEvent
+from event_scraper_generics.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
 from icalendar.cal import Calendar
 
 from src.db_cache import SQLiteDB
 from src.logger import create_logger_from_designated_logger
-from src.parser.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
-from src.parser.types.generics import GenericAddress, GenericEvent
 from src.publishers.mobilizon.api import logger
-from src.scrapers.abc_scraper import Scraper, find_geolocation_from_address
-
-import validators
-import requests
+from src.utils.location import find_geolocation_from_address
 
 logger = create_logger_from_designated_logger(__name__)
 
 
 class ICALScraper(Scraper):
+    def close_connection_to_source(self) -> None:
+        pass
+
     def get_source_type(self):
         return ScraperTypes.GOOGLE_CAL
 
     cache_db: SQLiteDB
     def __init__(self, cache_db: SQLiteDB):
-        super().__init__(cache_db)
         self.cache_db = cache_db
 
     def retrieve_from_source(self, group_event_kernel: GroupEventsKernel) -> list[EventsToUploadFromCalendarID]:
@@ -41,8 +42,6 @@ class ICALScraper(Scraper):
 
     # Get only events 1 week from today, and that are confirmed
 
-    def close(self):
-        pass
     def connect_to_source(self):
         pass
 

@@ -1,16 +1,15 @@
 import json
 import os
 
-from aiohttp import ClientError
+import validators
+from event_scraper_generics.abc_publisher import Publisher
+from event_scraper_generics.types.generics import GenericEvent
+from event_scraper_generics.types.submission import EventsToUploadFromCalendarID
 
 from src.db_cache import UploadedEventRow, UploadSource, SQLiteDB
 from src.logger import create_logger_from_designated_logger
-from src.parser.types.submission import EventsToUploadFromCalendarID
-from src.parser.types.generics import GenericEvent
-from src.publishers.abc_publisher import Publisher
 from src.publishers.mobilizon.api import MobilizonAPI
 from src.publishers.mobilizon.types import MobilizonEvent, EventParameters
-import validators
 
 logger = create_logger_from_designated_logger(__name__)
 
@@ -18,6 +17,7 @@ def none_if_not_present(x, dictionary):
     return None if x not in dictionary else dictionary[x]
 
 class MobilizonUploader(Publisher):
+
     mobilizonAPI: MobilizonAPI
     cache_db: SQLiteDB
     test_mode: bool
@@ -30,6 +30,12 @@ class MobilizonUploader(Publisher):
     def close(self):
         if not self.testMode:
             self.mobilizonAPI.logout()
+
+    def update(self) -> None:
+        pass
+
+    def monitor(self) -> None:
+        pass
 
     def upload(self, groups_events_to_upload: list[EventsToUploadFromCalendarID]):
         for events_to_upload in groups_events_to_upload:

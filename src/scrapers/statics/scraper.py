@@ -1,15 +1,19 @@
 import copy
 from datetime import datetime, timedelta
 
+from event_scraper_generics.abc_scraper import Scraper
+from event_scraper_generics.types.generics import GenericEvent
+from event_scraper_generics.types.submission import GroupEventsKernel, EventsToUploadFromCalendarID, ScraperTypes
+
 from src.logger import create_logger_from_designated_logger
-from src.parser.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
-from src.parser.types.generics import GenericEvent
-from src.scrapers.abc_scraper import Scraper
 
 logger = create_logger_from_designated_logger(__name__)
 
 
 class StaticScraper(Scraper):
+
+    def close_connection_to_source(self) -> None:
+        pass
 
     def get_source_type(self):
         return ScraperTypes.STATIC
@@ -25,9 +29,6 @@ class StaticScraper(Scraper):
         for event in events:
             event.description = f"Automatically scraped by event bot: \n\n{event.description} \n\n Source for farmer market info: https://portal.ct.gov/doag/adarc/adarc/farmers-market-nutrition-program/authorized-redemption-locations"
         return [EventsToUploadFromCalendarID(events, group_kernel, group_kernel.group_name)]
-
-    def close(self):
-        pass
 
 
 

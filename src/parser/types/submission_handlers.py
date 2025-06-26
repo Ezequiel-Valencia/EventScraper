@@ -1,7 +1,8 @@
+from event_scraper_generics.abc_publisher import Publisher
+from event_scraper_generics.abc_scraper import Scraper
+from event_scraper_generics.types.submission import ScraperTypes, GroupPackage
+
 from src.db_cache import SQLiteDB
-from src.parser.types.submission import GroupPackage, ScraperTypes
-from src.publishers.abc_publisher import Publisher
-from src.scrapers.abc_scraper import Scraper
 
 
 
