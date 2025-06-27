@@ -3,12 +3,12 @@ import datetime
 import pytz
 import requests
 from bs4 import BeautifulSoup
-from event_scraper_generics.abc_scraper import Scraper
-from event_scraper_generics.types.generics import GenericEvent, GenericAddress
-from event_scraper_generics.types.submission import GroupEventsKernel, ScraperTypes, EventsToUploadFromCalendarID
 
 from src.logger import create_logger_from_designated_logger
 from src.publishers.mobilizon.types import EventParameters
+from src.scrapers.abc_scraper import Scraper
+from src.types.generics import GenericEvent, GenericAddress
+from src.types.submission import GroupEventsKernel, ScraperTypes, EventsToUploadFromCalendarID
 
 logger = create_logger_from_designated_logger(__name__)
 

@@ -3,7 +3,6 @@ import os
 from datetime import datetime, timedelta
 
 import google.auth
-from event_scraper_generics.types.generics import GenericAddress, GenericEvent
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -11,6 +10,7 @@ from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
 
 from src.logger import create_logger_from_designated_logger
+from src.types.generics import GenericAddress, GenericEvent
 from src.utils.location import find_geolocation_from_address
 
 logger = create_logger_from_designated_logger(__name__)

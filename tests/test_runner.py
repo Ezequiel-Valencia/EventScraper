@@ -1,8 +1,8 @@
 import unittest
 
-from src.Runner import runner
+from src.Runner import _runner
 from src.db_cache import SQLiteDB
-from src.parser.jsonParser import get_runner_submission
+from src.parser.submission import get_runner_submission
 
 
 # TODO: Test the entire runner interaction that it executes
@@ -13,7 +13,7 @@ class TestRunner(unittest.TestCase):
         cache_db: SQLiteDB = SQLiteDB(in_memory_sq_lite=True)
         submission = get_runner_submission(True, cache_db,
                                            "https://kernels.ctgrassroots.org/test-json/test-submission.json")
-        runner(submission)
+        _runner(submission)
         db_results = cache_db.select_all_from_upload_table().fetchall()
         stonington_results = db_results[0]
         self.assertEqual("Stonington Farmers Market", stonington_results[2], "Title")
@@ -40,11 +40,11 @@ class TestRunner(unittest.TestCase):
         submission = get_runner_submission(True, cache_db,
 "https://kernels.ctgrassroots.org/test-json/test-submission.json")
 
-        runner(submission)
+        _runner(submission)
         cache_db = submission.cache_db
         db_results = cache_db.select_all_from_upload_table().fetchall()
 
-        runner(submission)
+        _runner(submission)
         second_db_results = cache_db.select_all_from_upload_table().fetchall()
 
         self.assertTrue(len(db_results) > 1)

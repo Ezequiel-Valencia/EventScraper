@@ -1,11 +1,11 @@
 import copy
 from datetime import datetime, timedelta
 
-from event_scraper_generics.abc_scraper import Scraper
-from event_scraper_generics.types.generics import GenericEvent
-from event_scraper_generics.types.submission import GroupEventsKernel, EventsToUploadFromCalendarID, ScraperTypes
 
 from src.logger import create_logger_from_designated_logger
+from src.scrapers.abc_scraper import Scraper
+from src.types.generics import GenericEvent
+from src.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
 
 logger = create_logger_from_designated_logger(__name__)
 
@@ -22,7 +22,6 @@ class StaticScraper(Scraper):
         pass
 
     def retrieve_from_source(self, group_kernel: GroupEventsKernel) -> [EventsToUploadFromCalendarID]:
-        json_path = group_kernel.json_source_url
         logger.info(f"Getting static events: {group_kernel.group_name}")
         events: [GenericEvent] = hydrate_event_template_with_legitimate_times(group_kernel)
         event: GenericEvent

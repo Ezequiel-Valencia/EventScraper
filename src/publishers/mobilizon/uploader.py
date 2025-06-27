@@ -2,14 +2,13 @@ import json
 import os
 
 import validators
-from event_scraper_generics.abc_publisher import Publisher
-from event_scraper_generics.types.generics import GenericEvent
-from event_scraper_generics.types.submission import EventsToUploadFromCalendarID
-
 from src.db_cache import UploadedEventRow, UploadSource, SQLiteDB
 from src.logger import create_logger_from_designated_logger
+from src.publishers.abc_publisher import Publisher
 from src.publishers.mobilizon.api import MobilizonAPI
 from src.publishers.mobilizon.types import MobilizonEvent, EventParameters
+from src.types.generics import GenericEvent
+from src.types.submission import EventsToUploadFromCalendarID
 
 logger = create_logger_from_designated_logger(__name__)
 
@@ -62,7 +61,7 @@ class MobilizonUploader(Publisher):
                                                       title=event.title, date=event.beginsOn,
                                                       group_id=event.attributedToId, group_name=event_kernel.group_name)
                         upload_source = UploadSource(uuid=upload_response["uuid"], website_url=event.onlineAddress,
-                                                     source=source_id, source_type=event_kernel.scraper_type)
+                                                     source=source_id, source_type=event_kernel.scraper_type.value)
                         self.cache_db.insert_uploaded_event(upload_row, upload_source)
                 except Exception as e:
                     logger.error(f"Unable to upload the following event: {event}", e)

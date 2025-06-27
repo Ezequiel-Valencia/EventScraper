@@ -23,7 +23,6 @@ aiohttp = "^3.10.10"
 validators = "^0.34.0"
 pandas = "^2.2.3"
 beautifulsoup4 = "^4.13.4"
-event_scraper_generics = "0.1.0"
 
 [build-system]
 requires = ["poetry-core"]

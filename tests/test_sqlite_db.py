@@ -1,10 +1,10 @@
-from event_scraper_generics.types.submission import ScraperTypes
 
 from src.db_cache import SQLiteDB, UploadedEventRow, UploadSource
 import sqlite3
 import os
 import unittest
 
+from src.types.submission import ScraperTypes
 
 
 # TODO: Test getting the last event uploaded for a specific group
@@ -21,9 +21,9 @@ class TestEventTable(unittest.TestCase):
         UploadedEventRow("uuid3", "id1", "title1", "2022-05-04T10:00:00-04:00", "gID1", group1Name),
     ]
     group1Source: [UploadSource] = [
-        UploadSource("uuid1", "web", sourceGroup1, ScraperTypes.GOOGLE_CAL),
-        UploadSource("uuid2", "web", sourceGroup1, ScraperTypes.GOOGLE_CAL),
-        UploadSource("uuid3", "web", sourceGroup1, ScraperTypes.GOOGLE_CAL)
+        UploadSource("uuid1", "web", sourceGroup1, ScraperTypes.GOOGLE_CAL.value),
+        UploadSource("uuid2", "web", sourceGroup1, ScraperTypes.GOOGLE_CAL.value),
+        UploadSource("uuid3", "web", sourceGroup1, ScraperTypes.GOOGLE_CAL.value)
 
     ]
     
@@ -34,10 +34,10 @@ class TestEventTable(unittest.TestCase):
         UploadedEventRow("uuid7", "id1", "title1", "2027-02-04T10:00:00-04:00", "gID2", group2Name)
     ]
     group2Source: [UploadSource] = [
-        UploadSource("uuid4", "web", sourceGroup2, ScraperTypes.STATIC),
-        UploadSource("uuid5", "web", sourceGroup2, ScraperTypes.STATIC),
-        UploadSource("uuid6", "web", sourceGroup2, ScraperTypes.STATIC),
-        UploadSource("uuid7", "web", sourceGroup2, ScraperTypes.STATIC)
+        UploadSource("uuid4", "web", sourceGroup2, ScraperTypes.STATIC.value),
+        UploadSource("uuid5", "web", sourceGroup2, ScraperTypes.STATIC.value),
+        UploadSource("uuid6", "web", sourceGroup2, ScraperTypes.STATIC.value),
+        UploadSource("uuid7", "web", sourceGroup2, ScraperTypes.STATIC.value)
     ]
     
     def insertGroup(self, db: SQLiteDB, group: [], groupSource: []):

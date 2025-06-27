@@ -5,14 +5,14 @@ from datetime import datetime, timedelta, timezone, date
 
 import icalendar
 import validators
-from event_scraper_generics.abc_scraper import Scraper
-from event_scraper_generics.types.generics import GenericAddress, GenericEvent
-from event_scraper_generics.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
 from icalendar.cal import Calendar
 
 from src.db_cache import SQLiteDB
 from src.logger import create_logger_from_designated_logger
 from src.publishers.mobilizon.api import logger
+from src.scrapers.abc_scraper import Scraper
+from src.types.generics import GenericEvent, GenericAddress
+from src.types.submission import ScraperTypes, EventsToUploadFromCalendarID, GroupEventsKernel
 from src.utils.location import find_geolocation_from_address
 
 logger = create_logger_from_designated_logger(__name__)

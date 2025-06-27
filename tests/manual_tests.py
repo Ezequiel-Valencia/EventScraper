@@ -3,16 +3,15 @@ import logging
 import os
 from datetime import timezone, timedelta, datetime
 
-from event_scraper_generics.types.generics import GenericEvent
-from event_scraper_generics.types.submission import GroupEventsKernel, ScraperTypes, GroupPackage
 from geopy.geocoders import Nominatim
 
 from src.db_cache import UploadedEventRow, SQLiteDB, UploadSource
-from src.parser.jsonParser import get_group_package
 from src.publishers.mobilizon.api import MobilizonAPI
 from src.publishers.mobilizon.types import EventParameters, MobilizonEvent
 from src.scrapers.google_calendar.api import GCalAPI
 from src.scrapers.ical.scraper import ICALScraper
+from src.types.generics import GenericEvent
+from src.types.submission import GroupEventsKernel, ScraperTypes, GroupPackage
 
 endpoint = os.environ.get("MOBILIZON_ENDPOINT")
 email = os.environ.get("MOBILIZON_EMAIL")

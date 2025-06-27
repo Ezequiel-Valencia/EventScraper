@@ -4,23 +4,23 @@ import time
 import traceback
 from urllib.error import HTTPError
 
-from event_scraper_generics.abc_publisher import Publisher
-from event_scraper_generics.abc_scraper import Scraper
-from event_scraper_generics.types.submission import GroupPackage, EventsToUploadFromCalendarID, GroupEventsKernel
 from slack_sdk.webhook import WebhookClient
 
 from src.db_cache import SQLiteDB
 from src.filter import normalize_generic_event
 from src.logger import create_logger_from_designated_logger
-from src.parser.jsonParser import get_runner_submission
-from src.parser.types.submission_handlers import RunnerSubmission
+from src.parser.submission import get_runner_submission
+from src.publishers.abc_publisher import Publisher
+from src.scrapers.abc_scraper import Scraper
+from src.types.submission import GroupPackage, EventsToUploadFromCalendarID, GroupEventsKernel
+from src.types.submission_handlers import RunnerSubmission
 from src.scrapers.Websites.cafe9 import Cafe9Scraper
 from src.scrapers.google_calendar.api import ExpiredToken
 
 logger = create_logger_from_designated_logger(__name__)
 
 
-def runner(runner_submission: RunnerSubmission, custom_scrapers: list[Scraper] = None):
+def _runner(runner_submission: RunnerSubmission, custom_scrapers: list[Scraper] = None):
     continue_scraping = True
     num_retries = 0
     theres_an_expired_token = False
@@ -77,7 +77,7 @@ def runner(runner_submission: RunnerSubmission, custom_scrapers: list[Scraper] =
     if theres_an_expired_token:
         raise ExpiredToken
 
-def days_to_sleep(days):
+def _days_to_sleep(days):
     now = datetime.datetime.now()
     seconds_from_zero = (now.hour * 60 * 60)
     time_at_2am = 2 * 60 * 60
@@ -90,7 +90,7 @@ def days_to_sleep(days):
     return time_to_sleep + (60 * 60 * 24 * days)
 
 
-def produce_slack_message(color, title, text, priority):
+def _produce_slack_message(color, title, text, priority):
     return {
             "color": color,
             "author_name": "CTEvent Scraper",
@@ -108,37 +108,33 @@ def produce_slack_message(color, title, text, priority):
             "footer": "CTEvent Scraper",
         }
 
-
-if __name__ == "__main__":
-
+def start_event_engine(webhook: WebhookClient = None, test_mode: bool = False):
     logger.info("Scraper Started")
     sleeping = 2
-    webhook = None if os.environ.get("SLACK_WEBHOOK") is None else WebhookClient(os.environ.get("SLACK_WEBHOOK"))
     while True:
         #####################
         # Create Submission #
         #####################
 
-        test_mode = False if "TEST_MODE" not in os.environ else True
         cache_db: SQLiteDB = SQLiteDB(test_mode)
         submission: RunnerSubmission = get_runner_submission(test_mode, cache_db)
 
         ######################
         # Execute Submission #
         ######################
-        timeToSleep = days_to_sleep(sleeping)
+        time_to_sleep = _days_to_sleep(sleeping)
         logger.info("Scraping")
         try:
-            runner(submission, [Cafe9Scraper()])
+            _runner(submission, [Cafe9Scraper()])
             logger.info("Sleeping " + str(sleeping) + " Days Until Next Scrape")
         except ExpiredToken:
-            timeToSleep = days_to_sleep(2)
+            time_to_sleep = _days_to_sleep(2)
             logger.info("Sleeping " + str(sleeping) + " Days Until Next Scrape")
             if webhook is not None:
                 response = webhook.send(attachments=[
-                    produce_slack_message("#e6e209", "Expired Token", "Replace token.json", "Medium")
+                    _produce_slack_message("#e6e209", "Expired Token", "Replace token.json", "Medium")
                 ])
-        
+
         except Exception as e:
             logger.error("Unknown Error")
             logger.error(e)
@@ -146,12 +142,18 @@ if __name__ == "__main__":
             logger.error("Going to Sleep for 7 days")
             if webhook is not None:
                 webhook.send(attachments=[
-                    produce_slack_message("#ab1a13", "Event Scraper Unknown Error", "Check logs for error.", "High")
+                    _produce_slack_message("#ab1a13", "Event Scraper Unknown Error", "Check logs for error.", "High")
                 ])
-            timeToSleep = days_to_sleep(7)
+            time_to_sleep = _days_to_sleep(7)
 
         cache_db.close()
-        time.sleep(timeToSleep)
-    
-    logger.info("Scraper Stopped")
+        time.sleep(time_to_sleep)
+
+
+if __name__ == "__main__":
+    env_webhook = None if os.environ.get("SLACK_WEBHOOK") is None else WebhookClient(os.environ.get("SLACK_WEBHOOK"))
+    env_test_mode = False if "TEST_MODE" not in os.environ else True
+
+    start_event_engine(env_webhook, env_test_mode)
+
 

@@ -1,9 +1,10 @@
 import unittest
 
-from event_scraper_generics.types.submission import GroupPackage, GroupEventsKernel, ScraperTypes
 
-from src.parser.jsonParser import get_group_package, get_runner_submission
-from src.parser.types.submission_handlers import RunnerSubmission
+from src.parser.package import get_group_package
+from src.parser.submission import get_runner_submission
+from src.types.submission import GroupEventsKernel, GroupPackage, ScraperTypes
+from src.types.submission_handlers import RunnerSubmission
 from src.publishers.mobilizon.uploader import MobilizonUploader
 from src.scrapers.google_calendar.scraper import GoogleCalendarScraper
 from src.scrapers.statics.scraper import StaticScraper

@@ -1,11 +1,10 @@
 import os
 import unittest
 
-from event_scraper_generics.types.generics import GenericEvent, GenericAddress
-from event_scraper_generics.types.submission import GroupEventsKernel, ScraperTypes, EventsToUploadFromCalendarID
-
 from src.db_cache import SQLiteDB
 from src.scrapers.ical.scraper import ICALScraper
+from src.types.generics import GenericEvent, GenericAddress
+from src.types.submission import GroupEventsKernel, EventsToUploadFromCalendarID, ScraperTypes
 
 
 class TestICALScraper(unittest.TestCase):

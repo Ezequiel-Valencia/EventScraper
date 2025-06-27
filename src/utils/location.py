@@ -1,8 +1,8 @@
-from event_scraper_generics.types.generics import GenericAddress
 from geopy import Nominatim
 from geopy.exc import GeocoderTimedOut
 
 from src.logger import create_logger_from_designated_logger
+from src.types.generics import GenericAddress
 
 logger = create_logger_from_designated_logger(__name__)
 
