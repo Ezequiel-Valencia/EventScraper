@@ -1,10 +1,6 @@
-import json
-import os
-import urllib
-
 import requests
 
-from calendar_event_engine.db_cache import SQLiteDB
+from calendar_event_engine.db.db_cache import SQLiteDB
 from calendar_event_engine.logger import create_logger_from_designated_logger
 from calendar_event_engine.parser.package import get_group_package
 from calendar_event_engine.publishers.abc_publisher import Publisher

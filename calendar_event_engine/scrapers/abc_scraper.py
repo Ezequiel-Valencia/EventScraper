@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from calendar_event_engine.types.submission import GroupEventsKernel, EventsToUploadFromCalendarID, ScraperTypes
+from calendar_event_engine.types.submission import GroupEventsKernel, AllEventsFromAGroup, ScraperTypes
 
 
 class Scraper(ABC):
@@ -12,7 +12,7 @@ class Scraper(ABC):
         pass
 
     @abstractmethod
-    def retrieve_from_source(self, event_kernel: GroupEventsKernel=None) -> list[EventsToUploadFromCalendarID]:
+    def retrieve_from_source(self, event_kernel: GroupEventsKernel=None) -> list[AllEventsFromAGroup]:
         """
         Takes GroupEventKernel and returns list[EventsToUploadFromCalendarID]
         For custom scrapers, ignore any input and directly scrape from the resource to create EventsToUploadFromCalendarID.

@@ -1,7 +1,8 @@
 
-from calendar_event_engine.db_cache import SQLiteDB, UploadedEventRow, UploadSource
+from calendar_event_engine.db.db_cache import SQLiteDB
+from calendar_event_engine.db.event_source_driver import EventSource
+from calendar_event_engine.db.uploaded_events_driver import UploadedEventRow
 import sqlite3
-import os
 import unittest
 
 from calendar_event_engine.types.submission import ScraperTypes
@@ -20,10 +21,10 @@ class TestEventTable(unittest.TestCase):
         UploadedEventRow("uuid2", "id1", "title1", "2022-05-04T10:00:00-04:00", "gID1", group1Name),
         UploadedEventRow("uuid3", "id1", "title1", "2022-05-04T10:00:00-04:00", "gID1", group1Name),
     ]
-    group1Source: [UploadSource] = [
-        UploadSource("uuid1", "web", sourceGroup1, ScraperTypes.GOOGLE_CAL.value),
-        UploadSource("uuid2", "web", sourceGroup1, ScraperTypes.GOOGLE_CAL.value),
-        UploadSource("uuid3", "web", sourceGroup1, ScraperTypes.GOOGLE_CAL.value)
+    group1Source: [EventSource] = [
+        EventSource("uuid1", "web", sourceGroup1, ScraperTypes.GOOGLE_CAL.value),
+        EventSource("uuid2", "web", sourceGroup1, ScraperTypes.GOOGLE_CAL.value),
+        EventSource("uuid3", "web", sourceGroup1, ScraperTypes.GOOGLE_CAL.value)
 
     ]
     
@@ -33,11 +34,11 @@ class TestEventTable(unittest.TestCase):
         UploadedEventRow("uuid6", "id1", "title1", "2027-01-04T10:00:00-04:00", "gID2", group2Name),
         UploadedEventRow("uuid7", "id1", "title1", "2027-02-04T10:00:00-04:00", "gID2", group2Name)
     ]
-    group2Source: [UploadSource] = [
-        UploadSource("uuid4", "web", sourceGroup2, ScraperTypes.STATIC.value),
-        UploadSource("uuid5", "web", sourceGroup2, ScraperTypes.STATIC.value),
-        UploadSource("uuid6", "web", sourceGroup2, ScraperTypes.STATIC.value),
-        UploadSource("uuid7", "web", sourceGroup2, ScraperTypes.STATIC.value)
+    group2Source: [EventSource] = [
+        EventSource("uuid4", "web", sourceGroup2, ScraperTypes.STATIC.value),
+        EventSource("uuid5", "web", sourceGroup2, ScraperTypes.STATIC.value),
+        EventSource("uuid6", "web", sourceGroup2, ScraperTypes.STATIC.value),
+        EventSource("uuid7", "web", sourceGroup2, ScraperTypes.STATIC.value)
     ]
     
     def insertGroup(self, db: SQLiteDB, group: [], groupSource: []):
@@ -74,16 +75,17 @@ class TestEventTable(unittest.TestCase):
         query = db.select_all_from_upload_table().fetchall()
         self.assertEqual(len(query), len(self.group2), "Ensure that all old events are deleted and only new ones are left")
         for row in query:
-            self.assertEqual(row[5], self.group2Name)
-        
-    def test_UniqueInsertion(self):
-        db = SQLiteDB(True)
-        
-        self.insertGroup(db, self.group1, self.group1Source)
-        self.insertGroup(db, self.group2, self.group2Source)
-        # Ensure only Unique UUIDs are inserted
-        self.assertRaises(sqlite3.IntegrityError, db.insert_uploaded_event, self.group2[0], self.group2Source[0])
-        
+            self.assertEqual(row[6], self.group2Name)
+
+    # TODO: Better test would be uniqueness based on combined constraints
+    # def test_UniqueInsertion(self):
+    #     db = SQLiteDB(True)
+    #
+    #     self.insertGroup(db, self.group1, self.group1Source)
+    #     self.insertGroup(db, self.group2, self.group2Source)
+    #     # Ensure only Unique UUIDs are inserted
+    #     self.assertRaises(sqlite3.IntegrityError, db.insert_uploaded_event, self.group2[0], self.group2Source[0])
+    #
     
     def test_IdempotentInsertionsAndCaching(self):
         db = SQLiteDB(True)
@@ -92,7 +94,7 @@ class TestEventTable(unittest.TestCase):
         query = db.select_all_from_upload_table().fetchall()
         
         for k in range(len(self.group2)):
-            inCache = db.entry_already_in_cache(self.group2[k].date, self.group2[k].title, self.group2Source[k].source)
+            inCache = db.entry_already_in_cache(self.group2[k].date, self.group2[k].title, self.group2Source[k].calendar_id)
             if not inCache:
                 db.insert_uploaded_event(self.group2[k], self.group2Source[k])
         

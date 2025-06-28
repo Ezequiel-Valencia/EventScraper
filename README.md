@@ -3,6 +3,9 @@
 A project dedicated to scrapping events and posting them on 
 different platforms for searching. Unbinding posted events from any single platform to help illuminate what is locally happening.
 
+Can be imported as a library in a python script or used
+directly through a docker container.
+
 ## Docker (Recommended Method)
 #### [Docker Image](https://hub.docker.com/repository/docker/avocadomoon/event-scraper/general)
 #### Env Variables

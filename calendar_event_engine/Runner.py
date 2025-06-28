@@ -6,14 +6,14 @@ from urllib.error import HTTPError
 
 from slack_sdk.webhook import WebhookClient
 
-from calendar_event_engine.db_cache import SQLiteDB
+from calendar_event_engine.db.db_cache import SQLiteDB
 from calendar_event_engine.filter import normalize_generic_event
 from calendar_event_engine.logger import create_logger_from_designated_logger
 from calendar_event_engine.parser.submission import get_runner_submission
 from calendar_event_engine.publishers.abc_publisher import Publisher
 from calendar_event_engine.scrapers.abc_scraper import Scraper
 from calendar_event_engine.types.custom_scraper import CustomScraperJob
-from calendar_event_engine.types.submission import GroupPackage, EventsToUploadFromCalendarID, GroupEventsKernel
+from calendar_event_engine.types.submission import GroupPackage, AllEventsFromAGroup, GroupEventsKernel
 from calendar_event_engine.types.submission_handlers import RunnerSubmission
 from calendar_event_engine.scrapers.google_calendar.api import ExpiredToken
 
@@ -43,7 +43,7 @@ def _runner(runner_submission: RunnerSubmission, custom_scrapers: dict[Publisher
                             for event_kernel in group_event_kernels:
                                 event_kernel: GroupEventsKernel
                                 try:
-                                    events: list[EventsToUploadFromCalendarID] = scraper.retrieve_from_source(event_kernel)
+                                    events: list[AllEventsFromAGroup] = scraper.retrieve_from_source(event_kernel)
                                 except HTTPError as err:
                                     if err.code == 404:
                                         logger.warning(f"The following group is no longer available: {event_kernel.group_name}")
@@ -112,7 +112,8 @@ def _produce_slack_message(color, title, text, priority):
             "footer": "CTEvent Scraper",
         }
 
-def start_event_engine(remote_json_url: str, slack_webhook: WebhookClient = None, custom_scrapers: dict[Publisher, list[CustomScraperJob]] = None, test_mode: bool = False):
+def start_event_engine(remote_json_url: str, cache_db: SQLiteDB, slack_webhook: WebhookClient = None, custom_scrapers: dict[Publisher, list[CustomScraperJob]] = None,
+                       test_mode: bool = False):
     logger.info("Scraper Started")
     sleeping = 2
     while True:
@@ -120,7 +121,6 @@ def start_event_engine(remote_json_url: str, slack_webhook: WebhookClient = None
         # Create Submission #
         #####################
 
-        cache_db: SQLiteDB = SQLiteDB(test_mode)
         submission: RunnerSubmission = get_runner_submission(remote_json_url, test_mode, cache_db)
 
         ######################
@@ -164,6 +164,6 @@ if __name__ == "__main__":
         raise err
 
 
-    start_event_engine(submission_json_path, env_webhook, None, env_test_mode)
+    start_event_engine(submission_json_path, SQLiteDB(env_test_mode), env_webhook, None, env_test_mode)
 
 

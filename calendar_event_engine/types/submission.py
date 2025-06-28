@@ -72,7 +72,7 @@ class GroupPackage:
         self.description = description
 
 
-class EventsToUploadFromCalendarID:
+class AllEventsFromAGroup:
     """
     Wrapper for the events scraped for a particular calendar id.
     Args:
