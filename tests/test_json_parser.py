@@ -1,11 +1,13 @@
 import unittest
 
-from src.parser.jsonParser import get_group_package, get_runner_submission
-from src.parser.types.submission_handlers import RunnerSubmission
-from src.publishers.mobilizon.uploader import MobilizonUploader
-from src.parser.types.submission import ScraperTypes, GroupEventsKernel, GroupPackage
-from src.scrapers.google_calendar.scraper import GoogleCalendarScraper
-from src.scrapers.statics.scraper import StaticScraper
+
+from calendar_event_engine.parser.package import get_group_package
+from calendar_event_engine.parser.submission import get_runner_submission
+from calendar_event_engine.types.submission import GroupEventsKernel, GroupPackage, ScraperTypes
+from calendar_event_engine.types.submission_handlers import RunnerSubmission
+from calendar_event_engine.publishers.mobilizon.uploader import MobilizonUploader
+from calendar_event_engine.scrapers.google_calendar.scraper import GoogleCalendarScraper
+from calendar_event_engine.scrapers.statics.scraper import StaticScraper
 
 
 class TestJSONParser(unittest.TestCase):
@@ -49,8 +51,8 @@ class TestJSONParser(unittest.TestCase):
             f"https://kernels.ctgrassroots.org/Group%20Packages/farmers_market.json",
         )
 
-        runner_submission: RunnerSubmission = get_runner_submission(True, None,
-                                                                         "https://kernels.ctgrassroots.org/Scraper%20Submission/include_everything.json")
+        runner_submission: RunnerSubmission = get_runner_submission("https://kernels.ctgrassroots.org/Scraper%20Submission/include_everything.json",
+            True, None)
 
         mobilizon_publisher = list(runner_submission.publishers.keys())[0]
         group_packages = list(runner_submission.publishers.values())[0]

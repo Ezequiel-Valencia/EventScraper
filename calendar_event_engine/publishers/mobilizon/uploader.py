@@ -1,16 +1,16 @@
 import json
 import os
 
-from aiohttp import ClientError
-
-from src.db_cache import UploadedEventRow, UploadSource, SQLiteDB
-from src.logger import create_logger_from_designated_logger
-from src.parser.types.submission import EventsToUploadFromCalendarID
-from src.parser.types.generics import GenericEvent
-from src.publishers.abc_publisher import Publisher
-from src.publishers.mobilizon.api import MobilizonAPI
-from src.publishers.mobilizon.types import MobilizonEvent, EventParameters
 import validators
+from calendar_event_engine.db.db_cache import SQLiteDB
+from calendar_event_engine.db.event_source_driver import EventSource
+from calendar_event_engine.db.uploaded_events_driver import UploadedEventRow
+from calendar_event_engine.logger import create_logger_from_designated_logger
+from calendar_event_engine.publishers.abc_publisher import Publisher
+from calendar_event_engine.publishers.mobilizon.api import MobilizonAPI
+from calendar_event_engine.publishers.mobilizon.types import MobilizonEvent, EventParameters
+from calendar_event_engine.types.generics import GenericEvent
+from calendar_event_engine.types.submission import AllEventsFromAGroup, GroupEventsKernel
 
 logger = create_logger_from_designated_logger(__name__)
 
@@ -18,49 +18,47 @@ def none_if_not_present(x, dictionary):
     return None if x not in dictionary else dictionary[x]
 
 class MobilizonUploader(Publisher):
+
     mobilizonAPI: MobilizonAPI
     cache_db: SQLiteDB
-    test_mode: bool
-    fakeUUIDForTests = 0
+    __fakeUUIDForTests = 0
 
     def __init__(self, test_mode, cache_db):
-        self.cache_db = cache_db
+        super().__init__(cache_db, logger)
         self.testMode = test_mode
 
     def close(self):
         if not self.testMode:
             self.mobilizonAPI.logout()
 
-    def upload(self, groups_events_to_upload: list[EventsToUploadFromCalendarID]):
-        for events_to_upload in groups_events_to_upload:
-            all_events = events_to_upload.events
-            event_kernel = events_to_upload.eventKernel
-            source_id = events_to_upload.calendar_id
-            for generic_event in all_events:
-                event: MobilizonEvent = self.generic_event_converter(generic_event)
-                upload_response: dict = {}
-                try:
-                    if not self.cache_db.entry_already_in_cache(event.beginsOn, event.title, source_id):
-                        if self.testMode:
-                            self.fakeUUIDForTests += 1
-                            upload_response = {"id": 1, "uuid": self.fakeUUIDForTests}
-                        else:
-                            if event.picture is not None and validators.url(event.picture.mediaId):
-                                potential_id = self.mobilizonAPI.upload_file(event.picture.mediaId)
-                                if potential_id != "":
-                                    event.picture.mediaId = potential_id
-                            upload_response = self.mobilizonAPI.bot_created_event(event)
-                        logger.info(f"{event.title}: {upload_response}")
+    def update(self) -> None:
+        pass
 
-                        upload_row = UploadedEventRow(uuid=upload_response["uuid"], id=upload_response["id"],
-                                                      title=event.title, date=event.beginsOn,
-                                                      group_id=event.attributedToId, group_name=event_kernel.group_name)
-                        upload_source = UploadSource(uuid=upload_response["uuid"], website_url=event.onlineAddress,
-                                                     source=source_id, source_type=event_kernel.scraper_type)
-                        self.cache_db.insert_uploaded_event(upload_row, upload_source)
-                except Exception as e:
-                    logger.error(f"Unable to upload the following event: {event}", e)
+    def monitor(self) -> None:
+        pass
 
+    def upload_individual_event(self, event_to_upload: GenericEvent) -> dict:
+        event: MobilizonEvent = self.generic_event_converter(event_to_upload)
+        if self.testMode:
+            self.__fakeUUIDForTests += 1
+            return {"id": 1, "uuid": self.__fakeUUIDForTests, "groupId": event.attributedToId}
+        else:
+            upload_response: dict = {}
+            if event.picture is not None and validators.url(event.picture.mediaId):
+                potential_id = self.mobilizonAPI.upload_file(event.picture.mediaId)
+                if potential_id != "":
+                    event.picture.mediaId = potential_id
+            upload_response = self.mobilizonAPI.bot_created_event(event)
+            upload_response["groupId"] = event.attributedToId
+            return upload_response
+
+    def create_cachable_response(self, upload_response: dict, event_kernel: GroupEventsKernel, event: GenericEvent, source_id):
+        upload_row = UploadedEventRow(uuid=upload_response["uuid"], user_id=upload_response["id"],
+                                      title=event.title, date=event.begins_on,
+                                      group_id=upload_response["groupId"], group_name=event_kernel.group_name)
+        upload_source = EventSource(uuid=upload_response["uuid"], website_url=event.online_address,
+                                    calendar_id=source_id, source_type=event_kernel.scraper_type.value)
+        return upload_row, upload_source
 
     def connect(self):
         if not self.testMode:

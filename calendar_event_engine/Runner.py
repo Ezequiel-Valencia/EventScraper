@@ -6,21 +6,21 @@ from urllib.error import HTTPError
 
 from slack_sdk.webhook import WebhookClient
 
-from src.db_cache import SQLiteDB
-from src.filter import normalize_generic_event
-from src.logger import create_logger_from_designated_logger
-from src.parser.jsonParser import get_runner_submission
-from src.parser.types.submission import GroupEventsKernel, EventsToUploadFromCalendarID, GroupPackage
-from src.parser.types.submission_handlers import RunnerSubmission
-from src.publishers.abc_publisher import Publisher
-from src.scrapers.Websites.cafe9 import Cafe9Scraper
-from src.scrapers.abc_scraper import Scraper
-from src.scrapers.google_calendar.api import ExpiredToken
+from calendar_event_engine.db.db_cache import SQLiteDB
+from calendar_event_engine.filter import normalize_generic_event
+from calendar_event_engine.logger import create_logger_from_designated_logger
+from calendar_event_engine.parser.submission import get_runner_submission
+from calendar_event_engine.publishers.abc_publisher import Publisher
+from calendar_event_engine.scrapers.abc_scraper import Scraper
+from calendar_event_engine.types.custom_scraper import CustomScraperJob
+from calendar_event_engine.types.submission import GroupPackage, AllEventsFromAGroup, GroupEventsKernel
+from calendar_event_engine.types.submission_handlers import RunnerSubmission
+from calendar_event_engine.scrapers.google_calendar.api import ExpiredToken
 
 logger = create_logger_from_designated_logger(__name__)
 
 
-def runner(runner_submission: RunnerSubmission, custom_scrapers: list[Scraper] = None):
+def _runner(runner_submission: RunnerSubmission, custom_scrapers: dict[Publisher, list[CustomScraperJob]] = None):
     continue_scraping = True
     num_retries = 0
     theres_an_expired_token = False
@@ -30,16 +30,6 @@ def runner(runner_submission: RunnerSubmission, custom_scrapers: list[Scraper] =
             for publisher in submitted_publishers.keys():
                 publisher: Publisher
                 publisher.connect()
-                if custom_scrapers:
-                    for scraper in custom_scrapers:
-                        try:
-                            scraper.connect_to_source()
-                            events = scraper.retrieve_from_source(None)
-                            normalize_generic_event(events)
-                            publisher.upload(events)
-                        except Exception as err:
-                            logger.error("Exception for custom scraper: " + scraper.__class__.__name__, err)
-
                 group_package: GroupPackage
                 for group_package in submitted_publishers[publisher]:
                     logger.info(f"Reading Group Package: {group_package.package_name}")
@@ -53,7 +43,7 @@ def runner(runner_submission: RunnerSubmission, custom_scrapers: list[Scraper] =
                             for event_kernel in group_event_kernels:
                                 event_kernel: GroupEventsKernel
                                 try:
-                                    events: list[EventsToUploadFromCalendarID] = scraper.retrieve_from_source(event_kernel)
+                                    events: list[AllEventsFromAGroup] = scraper.retrieve_from_source(event_kernel)
                                 except HTTPError as err:
                                     if err.code == 404:
                                         logger.warning(f"The following group is no longer available: {event_kernel.group_name}")
@@ -61,13 +51,27 @@ def runner(runner_submission: RunnerSubmission, custom_scrapers: list[Scraper] =
                                         raise
                                 normalize_generic_event(events)
                                 publisher.upload(events)
-                            scraper.close()
+                            scraper.close_connection_to_source()
                         except ExpiredToken:
                             theres_an_expired_token = True
                             logger.warning("Expired token.json needs to be replaced. Will continue scraping other types")
                             continue
                 publisher.close()
 
+
+            if custom_scrapers:
+                for publisher in custom_scrapers.keys():
+                    publisher.connect()
+                    for scrap in custom_scrapers[publisher]:
+                        try:
+                            logger.info(f"Using custom scraper {scrap.scraper_name}")
+                            scrap.custom_scraper.connect_to_source()
+                            events = scrap.custom_scraper.retrieve_from_source(None)
+                            normalize_generic_event(events)
+                            publisher.upload(events)
+                        except Exception as custom_err:
+                            logger.error("Exception for custom scraper: " + scrap.scraper_name, custom_err)
+                    publisher.close()
             continue_scraping = False
         except HTTPError as err:
             if err.code == 500 and err.reason.lower() == 'Too many requests'.lower():
@@ -77,7 +81,7 @@ def runner(runner_submission: RunnerSubmission, custom_scrapers: list[Scraper] =
     if theres_an_expired_token:
         raise ExpiredToken
 
-def days_to_sleep(days):
+def _days_to_sleep(days):
     now = datetime.datetime.now()
     seconds_from_zero = (now.hour * 60 * 60)
     time_at_2am = 2 * 60 * 60
@@ -90,7 +94,7 @@ def days_to_sleep(days):
     return time_to_sleep + (60 * 60 * 24 * days)
 
 
-def produce_slack_message(color, title, text, priority):
+def _produce_slack_message(color, title, text, priority):
     return {
             "color": color,
             "author_name": "CTEvent Scraper",
@@ -108,50 +112,58 @@ def produce_slack_message(color, title, text, priority):
             "footer": "CTEvent Scraper",
         }
 
-
-if __name__ == "__main__":
-
+def start_event_engine(remote_json_url: str, cache_db: SQLiteDB, slack_webhook: WebhookClient = None, custom_scrapers: dict[Publisher, list[CustomScraperJob]] = None,
+                       test_mode: bool = False):
     logger.info("Scraper Started")
     sleeping = 2
-    webhook = None if os.environ.get("SLACK_WEBHOOK") is None else WebhookClient(os.environ.get("SLACK_WEBHOOK"))
     while True:
         #####################
         # Create Submission #
         #####################
 
-        test_mode = False if "TEST_MODE" not in os.environ else True
-        cache_db: SQLiteDB = SQLiteDB(test_mode)
-        submission: RunnerSubmission = get_runner_submission(test_mode, cache_db)
+        submission: RunnerSubmission = get_runner_submission(remote_json_url, test_mode, cache_db)
 
         ######################
         # Execute Submission #
         ######################
-        timeToSleep = days_to_sleep(sleeping)
+        time_to_sleep = _days_to_sleep(sleeping)
         logger.info("Scraping")
         try:
-            runner(submission, [Cafe9Scraper(None)])
+            _runner(submission, custom_scrapers)
             logger.info("Sleeping " + str(sleeping) + " Days Until Next Scrape")
         except ExpiredToken:
-            timeToSleep = days_to_sleep(2)
+            time_to_sleep = _days_to_sleep(2)
             logger.info("Sleeping " + str(sleeping) + " Days Until Next Scrape")
-            if webhook is not None:
-                response = webhook.send(attachments=[
-                    produce_slack_message("#e6e209", "Expired Token", "Replace token.json", "Medium")
+            if slack_webhook is not None:
+                response = slack_webhook.send(attachments=[
+                    _produce_slack_message("#e6e209", "Expired Token", "Replace token.json", "Medium")
                 ])
-        
+
         except Exception as e:
             logger.error("Unknown Error")
             logger.error(e)
             logger.error(traceback.format_exc())
             logger.error("Going to Sleep for 7 days")
-            if webhook is not None:
-                webhook.send(attachments=[
-                    produce_slack_message("#ab1a13", "Event Scraper Unknown Error", "Check logs for error.", "High")
+            if slack_webhook is not None:
+                slack_webhook.send(attachments=[
+                    _produce_slack_message("#ab1a13", "Event Scraper Unknown Error", "Check logs for error.", "High")
                 ])
-            timeToSleep = days_to_sleep(7)
+            time_to_sleep = _days_to_sleep(7)
 
         cache_db.close()
-        time.sleep(timeToSleep)
-    
-    logger.info("Scraper Stopped")
+        time.sleep(time_to_sleep)
+
+
+if __name__ == "__main__":
+    env_webhook = None if os.environ.get("SLACK_WEBHOOK") is None else WebhookClient(os.environ.get("SLACK_WEBHOOK"))
+    env_test_mode = False if "TEST_MODE" not in os.environ else True
+    submission_json_path = os.getenv("RUNNER_SUBMISSION_JSON_PATH")
+    if submission_json_path is None:
+        err = NotImplementedError("Did not find JSON submission path")
+        logger.error(err)
+        raise err
+
+
+    start_event_engine(submission_json_path, SQLiteDB(env_test_mode), env_webhook, None, env_test_mode)
+
 

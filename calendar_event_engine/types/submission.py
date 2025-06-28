@@ -1,9 +1,9 @@
 from enum import Enum
 
-from src.parser.types.generics import GenericEvent
+from calendar_event_engine.types.generics import GenericEvent
 
 
-class ScraperTypes:
+class ScraperTypes(Enum):
     STATIC = "JSON"
     GOOGLE_CAL = "Google Calendar"
     ICAL = "ICAL"
@@ -12,6 +12,7 @@ class ScraperTypes:
 
 class PublisherTypes(Enum):
     MOBILIZON = "Mobilizon"
+
 
 class TimeInfo:
     """
@@ -26,6 +27,10 @@ class TimeInfo:
 
 
 class GroupEventsKernel:
+    """
+    All the information required to scrape a groups' information.
+    An individual group can have multiple calendars.
+    """
     event_template: GenericEvent
     group_name: str
     calendar_ids: list[str]
@@ -52,9 +57,14 @@ class GroupEventsKernel:
 
 
 class GroupPackage:
+    """
+    A bundle of scrapers (ICal, Google, etc...) and the groups (ex. Salsa Club, Nature Volunteers, Car Enthusiasts, etc...)
+    that information will be retrieved from.
+    """
     package_name: str
     description: str
-    scraper_type_and_kernels: {ScraperTypes: list[GroupEventsKernel]}
+
+    scraper_type_and_kernels: dict[ScraperTypes, list[GroupEventsKernel]]
 
     def __init__(self, scrapers_with_group_kernels, package_name, description):
         self.scraper_type_and_kernels = scrapers_with_group_kernels
@@ -62,7 +72,14 @@ class GroupPackage:
         self.description = description
 
 
-class EventsToUploadFromCalendarID:
+class AllEventsFromAGroup:
+    """
+    Wrapper for the events scraped for a particular calendar id.
+    Args:
+        events: All the events scrapped.
+        event_kernel: All information about the group which being scrapped.
+        source_id: The specific calendar where all the events scrapped originated from.
+    """
     events: list[GenericEvent] = None
     eventKernel: GroupEventsKernel = None
     calendar_id: str = ""

@@ -5,15 +5,13 @@ services:
     develop:
       watch:
         - action: sync
-          path: ./src
-          target: /app/src
+          path: calendar_event_engine
+          target: /app/calendar_event_engine
     security_opt:
       - no-new-privileges:true
     env_file: docker.env
     networks:
         - cteventscraper
-    volumes:
-      - /home/zek/Docker-Data/CTEventScraper:/app/config:z
 
 networks:
     cteventscraper:

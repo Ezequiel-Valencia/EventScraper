@@ -1,19 +1,19 @@
-import asyncio
 import json
 import logging
 import os
 from datetime import timezone, timedelta, datetime
-from urllib.error import HTTPError
+
 from geopy.geocoders import Nominatim
 
-from src.db_cache import UploadedEventRow, SQLiteDB, UploadSource
-from src.parser.jsonParser import get_group_package
-from src.parser.types.generics import GenericEvent
-from src.parser.types.submission import ScraperTypes, GroupEventsKernel, GroupPackage
-from src.publishers.mobilizon.api import MobilizonAPI
-from src.publishers.mobilizon.types import EventParameters, MobilizonEvent
-from src.scrapers.google_calendar.api import GCalAPI
-from src.scrapers.ical.scraper import ICALScraper
+from calendar_event_engine.db.db_cache import SQLiteDB
+from calendar_event_engine.db.event_source_driver import EventSource
+from calendar_event_engine.db.uploaded_events_driver import UploadedEventRow
+from calendar_event_engine.publishers.mobilizon.api import MobilizonAPI
+from calendar_event_engine.publishers.mobilizon.types import EventParameters, MobilizonEvent
+from calendar_event_engine.scrapers.google_calendar.api import GCalAPI
+from calendar_event_engine.scrapers.ical.scraper import ICALScraper
+from calendar_event_engine.types.generics import GenericEvent
+from calendar_event_engine.types.submission import GroupEventsKernel, ScraperTypes, GroupPackage
 
 endpoint = os.environ.get("MOBILIZON_ENDPOINT")
 email = os.environ.get("MOBILIZON_EMAIL")
@@ -37,7 +37,7 @@ def manual_test_creation():
                                          type=location['addresstype'])
     
     # print(mobilizonAPI.getActors())
-    # with open("//home/zek/Documents/Code/CTEventScraper/src/Duck.jpg", "rb") as f:
+    # with open("//home/zek/Documents/Code/CTEventScraper/calendar_event_engine/Duck.jpg", "rb") as f:
     #     params = {"file": f}
     #     print(mobilizonAPI.upload_file("Duck", f))
     mobilizon_api.logout()
@@ -77,10 +77,10 @@ def manual_test_cache_db():
         UploadedEventRow("uuid5", "id1", "title1", "2022-05-05T10:00:00-04:00", "2", "group2"),
         UploadedEventRow("uuid3", "id1", "title1", "2022-05-04T10:00:00-04:00", "2", "group2")
     ]
-    event_sources: [UploadSource] = [
-        UploadSource("uuid1", "website", "123", ScraperTypes.GOOGLE_CAL),
-        UploadSource("uuid5", "website", "123", ScraperTypes.GOOGLE_CAL),
-        UploadSource("uuid3", "website", "123", ScraperTypes.GOOGLE_CAL)
+    event_sources: [EventSource] = [
+        EventSource("uuid1", "website", "123", ScraperTypes.GOOGLE_CAL),
+        EventSource("uuid5", "website", "123", ScraperTypes.GOOGLE_CAL),
+        EventSource("uuid3", "website", "123", ScraperTypes.GOOGLE_CAL)
     ]
     db = SQLiteDB(True)
     for k in range(len(all_events)):

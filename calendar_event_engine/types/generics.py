@@ -1,6 +1,6 @@
 class GenericAddress:
-    """Address object that Mobilizon can utilize
-
+    """
+    Object used to store address information.
     Args:
         geom: Geo-coordinates for the point where the address is
         region: The state of this address
@@ -42,6 +42,7 @@ class GenericAddress:
 
 class GenericEvent:
     """
+    Object used to store event related information.
     Time is parsed with the local time zone available. Datetime + timezone
     """
     publisher_specific_info: dict

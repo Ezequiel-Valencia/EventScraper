@@ -4,45 +4,44 @@ import urllib.request
 from datetime import datetime, timedelta, timezone, date
 
 import icalendar
+import validators
 from icalendar.cal import Calendar
 
-from src.db_cache import SQLiteDB
-from src.logger import create_logger_from_designated_logger
-from src.parser.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
-from src.parser.types.generics import GenericAddress, GenericEvent
-from src.publishers.mobilizon.api import logger
-from src.scrapers.abc_scraper import Scraper, find_geolocation_from_address
-
-import validators
-import requests
+from calendar_event_engine.db.db_cache import SQLiteDB
+from calendar_event_engine.logger import create_logger_from_designated_logger
+from calendar_event_engine.publishers.mobilizon.api import logger
+from calendar_event_engine.scrapers.abc_scraper import Scraper
+from calendar_event_engine.types.generics import GenericEvent, GenericAddress
+from calendar_event_engine.types.submission import ScraperTypes, AllEventsFromAGroup, GroupEventsKernel
+from calendar_event_engine.utils.location import find_geolocation_from_address
 
 logger = create_logger_from_designated_logger(__name__)
 
 
 class ICALScraper(Scraper):
+    def close_connection_to_source(self) -> None:
+        pass
+
     def get_source_type(self):
         return ScraperTypes.GOOGLE_CAL
 
     cache_db: SQLiteDB
     def __init__(self, cache_db: SQLiteDB):
-        super().__init__(cache_db)
         self.cache_db = cache_db
 
-    def retrieve_from_source(self, group_event_kernel: GroupEventsKernel) -> list[EventsToUploadFromCalendarID]:
-        all_events: list[EventsToUploadFromCalendarID] = []
+    def retrieve_from_source(self, group_event_kernel: GroupEventsKernel) -> list[AllEventsFromAGroup]:
+        all_events: list[AllEventsFromAGroup] = []
         logger.info(f"Getting events from calendar {group_event_kernel.group_name}")
         for ical_id in group_event_kernel.calendar_ids:
             with urllib.request.urlopen(ical_id) as f:
                 calendar = icalendar.Calendar.from_ical(f.read())
                 events = _hydrate_event_template(calendar, group_event_kernel.event_template)
-                all_events.append(EventsToUploadFromCalendarID(events, group_event_kernel, ical_id))
+                all_events.append(AllEventsFromAGroup(events, group_event_kernel, ical_id))
 
         return all_events
 
     # Get only events 1 week from today, and that are confirmed
 
-    def close(self):
-        pass
     def connect_to_source(self):
         pass
 

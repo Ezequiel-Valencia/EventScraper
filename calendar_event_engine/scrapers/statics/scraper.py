@@ -1,15 +1,19 @@
 import copy
 from datetime import datetime, timedelta
 
-from src.logger import create_logger_from_designated_logger
-from src.parser.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
-from src.parser.types.generics import GenericEvent
-from src.scrapers.abc_scraper import Scraper
+
+from calendar_event_engine.logger import create_logger_from_designated_logger
+from calendar_event_engine.scrapers.abc_scraper import Scraper
+from calendar_event_engine.types.generics import GenericEvent
+from calendar_event_engine.types.submission import ScraperTypes, GroupEventsKernel, AllEventsFromAGroup
 
 logger = create_logger_from_designated_logger(__name__)
 
 
 class StaticScraper(Scraper):
+
+    def close_connection_to_source(self) -> None:
+        pass
 
     def get_source_type(self):
         return ScraperTypes.STATIC
@@ -17,17 +21,13 @@ class StaticScraper(Scraper):
     def connect_to_source(self):
         pass
 
-    def retrieve_from_source(self, group_kernel: GroupEventsKernel) -> [EventsToUploadFromCalendarID]:
-        json_path = group_kernel.json_source_url
+    def retrieve_from_source(self, group_kernel: GroupEventsKernel) -> [AllEventsFromAGroup]:
         logger.info(f"Getting static events: {group_kernel.group_name}")
         events: [GenericEvent] = hydrate_event_template_with_legitimate_times(group_kernel)
         event: GenericEvent
         for event in events:
             event.description = f"Automatically scraped by event bot: \n\n{event.description} \n\n Source for farmer market info: https://portal.ct.gov/doag/adarc/adarc/farmers-market-nutrition-program/authorized-redemption-locations"
-        return [EventsToUploadFromCalendarID(events, group_kernel, group_kernel.group_name)]
-
-    def close(self):
-        pass
+        return [AllEventsFromAGroup(events, group_kernel, group_kernel.group_name)]
 
 
 

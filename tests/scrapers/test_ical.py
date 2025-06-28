@@ -1,10 +1,10 @@
 import os
 import unittest
 
-from src.db_cache import SQLiteDB
-from src.parser.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
-from src.parser.types.generics import GenericAddress, GenericEvent
-from src.scrapers.ical.scraper import ICALScraper
+from calendar_event_engine.db.db_cache import SQLiteDB
+from calendar_event_engine.scrapers.ical.scraper import ICALScraper
+from calendar_event_engine.types.generics import GenericEvent, GenericAddress
+from calendar_event_engine.types.submission import GroupEventsKernel, AllEventsFromAGroup, ScraperTypes
 
 
 class TestICALScraper(unittest.TestCase):
@@ -22,8 +22,8 @@ class TestICALScraper(unittest.TestCase):
                             ["https://kernels.ctgrassroots.org/test-json/test.ical"],
                                         ScraperTypes.ICAL, "")
 
-        retrieved: list[EventsToUploadFromCalendarID] = ical_scraper.retrieve_from_source(test_kernel)
-        event_to_upload : EventsToUploadFromCalendarID = retrieved[0]
+        retrieved: list[AllEventsFromAGroup] = ical_scraper.retrieve_from_source(test_kernel)
+        event_to_upload : AllEventsFromAGroup = retrieved[0]
         event: GenericEvent = event_to_upload.events[0]
 
         test_event = GenericEvent(mobilizon_metadata, title='Black-eyed Sally’s Jazz Jam', description="""Automatically scraped by Event Bot : 

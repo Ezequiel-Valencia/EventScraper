@@ -7,9 +7,9 @@ from gql.transport.requests import RequestsHTTPTransport
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
 import aiohttp
-from src.logger import create_logger_from_designated_logger
-from src.publishers.mobilizon.gql_requests import EventGQL, AuthenticationGQL, ActorsGQL
-from src.publishers.mobilizon.types import MobilizonEvent, Actor
+from calendar_event_engine.logger import create_logger_from_designated_logger
+from calendar_event_engine.publishers.mobilizon.gql_requests import EventGQL, AuthenticationGQL, ActorsGQL
+from calendar_event_engine.publishers.mobilizon.types import MobilizonEvent, Actor
 
 logger = create_logger_from_designated_logger(__name__)
 
