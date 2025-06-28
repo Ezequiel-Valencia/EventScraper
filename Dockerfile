@@ -16,7 +16,7 @@ RUN apt-get -y install python3 && apt-get -y install python3-pip && apt-get -y i
 ##################
 ## Add Src Code ##
 ##################
-ADD event_engine /app/event_engine
+ADD calendar_event_engine /app/calendar_event_engine
 COPY pyproject.toml /app
 COPY README.md /app
 
@@ -27,9 +27,9 @@ COPY README.md /app
 RUN groupadd eventg
 RUN useradd -m -g eventg eventscraper
 RUN chown eventscraper:eventg -R /app
-RUN find /app/event_engine -type f -exec chmod u=r,g=r,o= {} +
-RUN find /app/event_engine -type d -exec chmod u=rx,g=rx,o=rx {} +
-RUN chmod u=rx,g=rx,o=rx /app/event_engine
+RUN find /app/calendar_event_engine -type f -exec chmod u=r,g=r,o= {} +
+RUN find /app/calendar_event_engine -type d -exec chmod u=rx,g=rx,o=rx {} +
+RUN chmod u=rx,g=rx,o=rx /app/calendar_event_engine
 
 
 #################################

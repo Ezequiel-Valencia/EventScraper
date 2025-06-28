@@ -1,13 +1,13 @@
 import unittest
 
 
-from event_engine.parser.package import get_group_package
-from event_engine.parser.submission import get_runner_submission
-from event_engine.types.submission import GroupEventsKernel, GroupPackage, ScraperTypes
-from event_engine.types.submission_handlers import RunnerSubmission
-from event_engine.publishers.mobilizon.uploader import MobilizonUploader
-from event_engine.scrapers.google_calendar.scraper import GoogleCalendarScraper
-from event_engine.scrapers.statics.scraper import StaticScraper
+from calendar_event_engine.parser.package import get_group_package
+from calendar_event_engine.parser.submission import get_runner_submission
+from calendar_event_engine.types.submission import GroupEventsKernel, GroupPackage, ScraperTypes
+from calendar_event_engine.types.submission_handlers import RunnerSubmission
+from calendar_event_engine.publishers.mobilizon.uploader import MobilizonUploader
+from calendar_event_engine.scrapers.google_calendar.scraper import GoogleCalendarScraper
+from calendar_event_engine.scrapers.statics.scraper import StaticScraper
 
 
 class TestJSONParser(unittest.TestCase):

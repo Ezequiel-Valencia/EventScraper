@@ -1,5 +1,5 @@
-from event_engine.publishers.abc_publisher import Publisher
-from event_engine.scrapers.abc_scraper import Scraper
+from calendar_event_engine.publishers.abc_publisher import Publisher
+from calendar_event_engine.scrapers.abc_scraper import Scraper
 
 
 class CustomScraperJob:
@@ -9,12 +9,9 @@ class CustomScraperJob:
     """
     scraper_name: str
     description: str
-    publication_destination: Publisher
     custom_scraper: Scraper
 
-    def __init__(self, scraper_name: str, description: str,
-                 publication_destination: Publisher, custom_scraper: Scraper):
+    def __init__(self, scraper_name: str, description: str, custom_scraper: Scraper):
         self.custom_scraper = custom_scraper
-        self.publication_destination = publication_destination
         self.description = description
         self.scraper_name = scraper_name

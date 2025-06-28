@@ -1,8 +1,8 @@
 import requests
 import validators
 
-from event_engine.types.generics import GenericEvent
-from event_engine.types.submission import EventsToUploadFromCalendarID
+from calendar_event_engine.types.generics import GenericEvent
+from calendar_event_engine.types.submission import EventsToUploadFromCalendarID
 
 
 # https://www.geeksforgeeks.org/http-headers-content-type/

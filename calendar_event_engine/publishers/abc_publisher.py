@@ -1,7 +1,7 @@
 
 from abc import ABC, abstractmethod
 
-from event_engine.types.submission import EventsToUploadFromCalendarID
+from calendar_event_engine.types.submission import EventsToUploadFromCalendarID
 
 
 class Publisher(ABC):

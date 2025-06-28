@@ -1,6 +1,6 @@
 from enum import Enum
 
-from event_engine.types.generics import GenericEvent
+from calendar_event_engine.types.generics import GenericEvent
 
 
 class ScraperTypes(Enum):

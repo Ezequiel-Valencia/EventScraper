@@ -5,8 +5,8 @@ services:
     develop:
       watch:
         - action: sync
-          path: ./event_engine
-          target: /app/event_engine
+          path: calendar_event_engine
+          target: /app/calendar_event_engine
     security_opt:
       - no-new-privileges:true
     env_file: docker.env

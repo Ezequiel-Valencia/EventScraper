@@ -2,10 +2,10 @@ import copy
 from datetime import datetime, timedelta
 
 
-from event_engine.logger import create_logger_from_designated_logger
-from event_engine.scrapers.abc_scraper import Scraper
-from event_engine.types.generics import GenericEvent
-from event_engine.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
+from calendar_event_engine.logger import create_logger_from_designated_logger
+from calendar_event_engine.scrapers.abc_scraper import Scraper
+from calendar_event_engine.types.generics import GenericEvent
+from calendar_event_engine.types.submission import ScraperTypes, GroupEventsKernel, EventsToUploadFromCalendarID
 
 logger = create_logger_from_designated_logger(__name__)
 

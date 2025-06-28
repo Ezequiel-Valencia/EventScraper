@@ -1,8 +1,8 @@
 from geopy import Nominatim
 from geopy.exc import GeocoderTimedOut
 
-from event_engine.logger import create_logger_from_designated_logger
-from event_engine.types.generics import GenericAddress
+from calendar_event_engine.logger import create_logger_from_designated_logger
+from calendar_event_engine.types.generics import GenericAddress
 
 logger = create_logger_from_designated_logger(__name__)
 

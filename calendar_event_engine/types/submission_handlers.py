@@ -1,8 +1,8 @@
 
-from event_engine.db_cache import SQLiteDB
-from event_engine.publishers.abc_publisher import Publisher
-from event_engine.scrapers.abc_scraper import Scraper
-from event_engine.types.submission import ScraperTypes, GroupPackage
+from calendar_event_engine.db_cache import SQLiteDB
+from calendar_event_engine.publishers.abc_publisher import Publisher
+from calendar_event_engine.scrapers.abc_scraper import Scraper
+from calendar_event_engine.types.submission import ScraperTypes, GroupPackage
 
 
 class RunnerSubmission:

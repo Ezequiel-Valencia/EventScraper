@@ -7,13 +7,13 @@ import icalendar
 import validators
 from icalendar.cal import Calendar
 
-from event_engine.db_cache import SQLiteDB
-from event_engine.logger import create_logger_from_designated_logger
-from event_engine.publishers.mobilizon.api import logger
-from event_engine.scrapers.abc_scraper import Scraper
-from event_engine.types.generics import GenericEvent, GenericAddress
-from event_engine.types.submission import ScraperTypes, EventsToUploadFromCalendarID, GroupEventsKernel
-from event_engine.utils.location import find_geolocation_from_address
+from calendar_event_engine.db_cache import SQLiteDB
+from calendar_event_engine.logger import create_logger_from_designated_logger
+from calendar_event_engine.publishers.mobilizon.api import logger
+from calendar_event_engine.scrapers.abc_scraper import Scraper
+from calendar_event_engine.types.generics import GenericEvent, GenericAddress
+from calendar_event_engine.types.submission import ScraperTypes, EventsToUploadFromCalendarID, GroupEventsKernel
+from calendar_event_engine.utils.location import find_geolocation_from_address
 
 logger = create_logger_from_designated_logger(__name__)
 

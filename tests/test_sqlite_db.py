@@ -1,10 +1,10 @@
 
-from event_engine.db_cache import SQLiteDB, UploadedEventRow, UploadSource
+from calendar_event_engine.db_cache import SQLiteDB, UploadedEventRow, UploadSource
 import sqlite3
 import os
 import unittest
 
-from event_engine.types.submission import ScraperTypes
+from calendar_event_engine.types.submission import ScraperTypes
 
 
 # TODO: Test getting the last event uploaded for a specific group

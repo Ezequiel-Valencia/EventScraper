@@ -4,17 +4,17 @@ import urllib
 
 import requests
 
-from event_engine.db_cache import SQLiteDB
-from event_engine.logger import create_logger_from_designated_logger
-from event_engine.parser.package import get_group_package
-from event_engine.publishers.abc_publisher import Publisher
-from event_engine.publishers.mobilizon.uploader import MobilizonUploader
-from event_engine.scrapers.abc_scraper import Scraper
-from event_engine.scrapers.google_calendar.scraper import GoogleCalendarScraper
-from event_engine.scrapers.ical.scraper import ICALScraper
-from event_engine.scrapers.statics.scraper import StaticScraper
-from event_engine.types.submission import PublisherTypes, ScraperTypes, GroupPackage
-from event_engine.types.submission_handlers import RunnerSubmission
+from calendar_event_engine.db_cache import SQLiteDB
+from calendar_event_engine.logger import create_logger_from_designated_logger
+from calendar_event_engine.parser.package import get_group_package
+from calendar_event_engine.publishers.abc_publisher import Publisher
+from calendar_event_engine.publishers.mobilizon.uploader import MobilizonUploader
+from calendar_event_engine.scrapers.abc_scraper import Scraper
+from calendar_event_engine.scrapers.google_calendar.scraper import GoogleCalendarScraper
+from calendar_event_engine.scrapers.ical.scraper import ICALScraper
+from calendar_event_engine.scrapers.statics.scraper import StaticScraper
+from calendar_event_engine.types.submission import PublisherTypes, ScraperTypes, GroupPackage
+from calendar_event_engine.types.submission_handlers import RunnerSubmission
 
 logger = create_logger_from_designated_logger(__name__)
 

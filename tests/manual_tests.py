@@ -5,13 +5,13 @@ from datetime import timezone, timedelta, datetime
 
 from geopy.geocoders import Nominatim
 
-from event_engine.db_cache import UploadedEventRow, SQLiteDB, UploadSource
-from event_engine.publishers.mobilizon.api import MobilizonAPI
-from event_engine.publishers.mobilizon.types import EventParameters, MobilizonEvent
-from event_engine.scrapers.google_calendar.api import GCalAPI
-from event_engine.scrapers.ical.scraper import ICALScraper
-from event_engine.types.generics import GenericEvent
-from event_engine.types.submission import GroupEventsKernel, ScraperTypes, GroupPackage
+from calendar_event_engine.db_cache import UploadedEventRow, SQLiteDB, UploadSource
+from calendar_event_engine.publishers.mobilizon.api import MobilizonAPI
+from calendar_event_engine.publishers.mobilizon.types import EventParameters, MobilizonEvent
+from calendar_event_engine.scrapers.google_calendar.api import GCalAPI
+from calendar_event_engine.scrapers.ical.scraper import ICALScraper
+from calendar_event_engine.types.generics import GenericEvent
+from calendar_event_engine.types.submission import GroupEventsKernel, ScraperTypes, GroupPackage
 
 endpoint = os.environ.get("MOBILIZON_ENDPOINT")
 email = os.environ.get("MOBILIZON_EMAIL")
@@ -35,7 +35,7 @@ def manual_test_creation():
                                          type=location['addresstype'])
     
     # print(mobilizonAPI.getActors())
-    # with open("//home/zek/Documents/Code/CTEventScraper/event_engine/Duck.jpg", "rb") as f:
+    # with open("//home/zek/Documents/Code/CTEventScraper/calendar_event_engine/Duck.jpg", "rb") as f:
     #     params = {"file": f}
     #     print(mobilizonAPI.upload_file("Duck", f))
     mobilizon_api.logout()

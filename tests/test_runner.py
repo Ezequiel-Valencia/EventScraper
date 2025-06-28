@@ -1,8 +1,8 @@
 import unittest
 
-from event_engine.Runner import _runner
-from event_engine.db_cache import SQLiteDB
-from event_engine.parser.submission import get_runner_submission
+from calendar_event_engine.Runner import _runner
+from calendar_event_engine.db_cache import SQLiteDB
+from calendar_event_engine.parser.submission import get_runner_submission
 
 
 # TODO: Test the entire runner interaction that it executes
