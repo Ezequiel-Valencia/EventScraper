@@ -9,9 +9,9 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build, Resource
 from googleapiclient.errors import HttpError
 
-from src.logger import create_logger_from_designated_logger
-from src.types.generics import GenericAddress, GenericEvent
-from src.utils.location import find_geolocation_from_address
+from event_engine.logger import create_logger_from_designated_logger
+from event_engine.types.generics import GenericAddress, GenericEvent
+from event_engine.utils.location import find_geolocation_from_address
 
 logger = create_logger_from_designated_logger(__name__)
 

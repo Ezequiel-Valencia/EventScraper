@@ -2,13 +2,13 @@ import json
 import os
 
 import validators
-from src.db_cache import UploadedEventRow, UploadSource, SQLiteDB
-from src.logger import create_logger_from_designated_logger
-from src.publishers.abc_publisher import Publisher
-from src.publishers.mobilizon.api import MobilizonAPI
-from src.publishers.mobilizon.types import MobilizonEvent, EventParameters
-from src.types.generics import GenericEvent
-from src.types.submission import EventsToUploadFromCalendarID
+from event_engine.db_cache import UploadedEventRow, UploadSource, SQLiteDB
+from event_engine.logger import create_logger_from_designated_logger
+from event_engine.publishers.abc_publisher import Publisher
+from event_engine.publishers.mobilizon.api import MobilizonAPI
+from event_engine.publishers.mobilizon.types import MobilizonEvent, EventParameters
+from event_engine.types.generics import GenericEvent
+from event_engine.types.submission import EventsToUploadFromCalendarID
 
 logger = create_logger_from_designated_logger(__name__)
 

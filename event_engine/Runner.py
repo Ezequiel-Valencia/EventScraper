@@ -6,16 +6,16 @@ from urllib.error import HTTPError
 
 from slack_sdk.webhook import WebhookClient
 
-from src.db_cache import SQLiteDB
-from src.filter import normalize_generic_event
-from src.logger import create_logger_from_designated_logger
-from src.parser.submission import get_runner_submission
-from src.publishers.abc_publisher import Publisher
-from src.scrapers.abc_scraper import Scraper
-from src.types.submission import GroupPackage, EventsToUploadFromCalendarID, GroupEventsKernel
-from src.types.submission_handlers import RunnerSubmission
-from src.scrapers.Websites.cafe9 import Cafe9Scraper
-from src.scrapers.google_calendar.api import ExpiredToken
+from event_engine.db_cache import SQLiteDB
+from event_engine.filter import normalize_generic_event
+from event_engine.logger import create_logger_from_designated_logger
+from event_engine.parser.submission import get_runner_submission
+from event_engine.publishers.abc_publisher import Publisher
+from event_engine.scrapers.abc_scraper import Scraper
+from event_engine.types.submission import GroupPackage, EventsToUploadFromCalendarID, GroupEventsKernel
+from event_engine.types.submission_handlers import RunnerSubmission
+from event_engine.scrapers.Websites.cafe9 import Cafe9Scraper
+from event_engine.scrapers.google_calendar.api import ExpiredToken
 
 logger = create_logger_from_designated_logger(__name__)
 
@@ -108,7 +108,7 @@ def _produce_slack_message(color, title, text, priority):
             "footer": "CTEvent Scraper",
         }
 
-def start_event_engine(webhook: WebhookClient = None, test_mode: bool = False):
+def start_event_engine(remote_json_url: str, webhook: WebhookClient = None, test_mode: bool = False):
     logger.info("Scraper Started")
     sleeping = 2
     while True:
@@ -117,7 +117,7 @@ def start_event_engine(webhook: WebhookClient = None, test_mode: bool = False):
         #####################
 
         cache_db: SQLiteDB = SQLiteDB(test_mode)
-        submission: RunnerSubmission = get_runner_submission(test_mode, cache_db)
+        submission: RunnerSubmission = get_runner_submission(remote_json_url, test_mode, cache_db)
 
         ######################
         # Execute Submission #
@@ -153,7 +153,13 @@ def start_event_engine(webhook: WebhookClient = None, test_mode: bool = False):
 if __name__ == "__main__":
     env_webhook = None if os.environ.get("SLACK_WEBHOOK") is None else WebhookClient(os.environ.get("SLACK_WEBHOOK"))
     env_test_mode = False if "TEST_MODE" not in os.environ else True
+    submission_json_path = os.getenv("RUNNER_SUBMISSION_JSON_PATH")
+    if submission_json_path is None:
+        err = NotImplementedError("Did not find JSON submission path")
+        logger.error(err)
+        raise err
 
-    start_event_engine(env_webhook, env_test_mode)
+
+    start_event_engine(submission_json_path, env_webhook, env_test_mode)
 
 

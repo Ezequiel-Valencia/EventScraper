@@ -2,25 +2,25 @@ import json
 import os
 import urllib
 
-from src.logger import create_logger_from_designated_logger
-from src.parser.package import get_group_package
-from src.publishers.abc_publisher import Publisher
-from src.publishers.mobilizon.uploader import MobilizonUploader
-from src.scrapers.abc_scraper import Scraper
-from src.scrapers.google_calendar.scraper import GoogleCalendarScraper
-from src.scrapers.ical.scraper import ICALScraper
-from src.scrapers.statics.scraper import StaticScraper
-from src.types.submission import PublisherTypes, ScraperTypes, GroupPackage
-from src.types.submission_handlers import RunnerSubmission
+import requests
+
+from event_engine.db_cache import SQLiteDB
+from event_engine.logger import create_logger_from_designated_logger
+from event_engine.parser.package import get_group_package
+from event_engine.publishers.abc_publisher import Publisher
+from event_engine.publishers.mobilizon.uploader import MobilizonUploader
+from event_engine.scrapers.abc_scraper import Scraper
+from event_engine.scrapers.google_calendar.scraper import GoogleCalendarScraper
+from event_engine.scrapers.ical.scraper import ICALScraper
+from event_engine.scrapers.statics.scraper import StaticScraper
+from event_engine.types.submission import PublisherTypes, ScraperTypes, GroupPackage
+from event_engine.types.submission_handlers import RunnerSubmission
 
 logger = create_logger_from_designated_logger(__name__)
 
 
-def get_runner_submission(test_mode, cache_db, submission_path=None) -> RunnerSubmission:
-    json_submission: dict = None
-    submission_json_path = os.getenv("RUNNER_SUBMISSION_JSON_PATH") if submission_path is None else submission_path
-    with urllib.request.urlopen(submission_json_path) as f:
-        json_submission = json.load(f)
+def get_runner_submission(remote_submission_url: str, test_mode: bool, cache_db: SQLiteDB) -> RunnerSubmission:
+    json_submission: dict = requests.get(remote_submission_url).json()
 
     publisher_package: dict[Publisher, list[GroupPackage]] = dict()
     respective_scrapers: dict[ScraperTypes, Scraper] = dict()

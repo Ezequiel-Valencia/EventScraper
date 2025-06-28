@@ -3,7 +3,7 @@ from enum import Enum
 from gql import gql
 from pydantic import BaseModel
 
-from src.publishers.mobilizon.types import MobilizonEvent
+from event_engine.publishers.mobilizon.types import MobilizonEvent
 
 
 # TODO: Clean all text for dangerous input

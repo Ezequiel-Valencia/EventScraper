@@ -1,14 +1,14 @@
 import os
 
 
-from src.db_cache import SQLiteDB
-from src.logger import create_logger_from_designated_logger
-from src.parser.package import get_group_package
-from src.publishers.mobilizon.api import logger
-from src.scrapers.abc_scraper import Scraper
-from src.scrapers.google_calendar.api import GCalAPI
-from src.types.generics import GenericEvent
-from src.types.submission import GroupEventsKernel, EventsToUploadFromCalendarID, ScraperTypes
+from event_engine.db_cache import SQLiteDB
+from event_engine.logger import create_logger_from_designated_logger
+from event_engine.parser.package import get_group_package
+from event_engine.publishers.mobilizon.api import logger
+from event_engine.scrapers.abc_scraper import Scraper
+from event_engine.scrapers.google_calendar.api import GCalAPI
+from event_engine.types.generics import GenericEvent
+from event_engine.types.submission import GroupEventsKernel, EventsToUploadFromCalendarID, ScraperTypes
 
 logger = create_logger_from_designated_logger(__name__)
 

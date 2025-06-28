@@ -4,11 +4,11 @@ import pytz
 import requests
 from bs4 import BeautifulSoup
 
-from src.logger import create_logger_from_designated_logger
-from src.publishers.mobilizon.types import EventParameters
-from src.scrapers.abc_scraper import Scraper
-from src.types.generics import GenericEvent, GenericAddress
-from src.types.submission import GroupEventsKernel, ScraperTypes, EventsToUploadFromCalendarID
+from event_engine.logger import create_logger_from_designated_logger
+from event_engine.publishers.mobilizon.types import EventParameters
+from event_engine.scrapers.abc_scraper import Scraper
+from event_engine.types.generics import GenericEvent, GenericAddress
+from event_engine.types.submission import GroupEventsKernel, ScraperTypes, EventsToUploadFromCalendarID
 
 logger = create_logger_from_designated_logger(__name__)
 

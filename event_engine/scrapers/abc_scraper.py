@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.types.submission import GroupEventsKernel, EventsToUploadFromCalendarID, ScraperTypes
+from event_engine.types.submission import GroupEventsKernel, EventsToUploadFromCalendarID, ScraperTypes
 
 
 class Scraper(ABC):

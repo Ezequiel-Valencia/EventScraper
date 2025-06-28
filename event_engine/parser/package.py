@@ -1,8 +1,8 @@
 import json
 import urllib
 
-from src.types.generics import GenericAddress, GenericEvent
-from src.types.submission import ScraperTypes, GroupPackage, TimeInfo, GroupEventsKernel
+from event_engine.types.generics import GenericAddress, GenericEvent
+from event_engine.types.submission import ScraperTypes, GroupPackage, TimeInfo, GroupEventsKernel
 
 
 def none_if_not_present(x, dictionary):

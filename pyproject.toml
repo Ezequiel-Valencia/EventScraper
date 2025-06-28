@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "src"
+name = "event_engine"
 version = "1.0.0"
 description = ""
 authors = ["Ezequiel Valencia"]

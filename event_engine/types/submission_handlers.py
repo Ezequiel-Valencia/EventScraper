@@ -1,8 +1,8 @@
 
-from src.db_cache import SQLiteDB
-from src.publishers.abc_publisher import Publisher
-from src.scrapers.abc_scraper import Scraper
-from src.types.submission import ScraperTypes, GroupPackage
+from event_engine.db_cache import SQLiteDB
+from event_engine.publishers.abc_publisher import Publisher
+from event_engine.scrapers.abc_scraper import Scraper
+from event_engine.types.submission import ScraperTypes, GroupPackage
 
 
 class RunnerSubmission:

@@ -1,6 +1,6 @@
 import unittest
 
-from src.scrapers.Websites.cafe9 import Cafe9Scraper
+from event_engine.scrapers.Websites.cafe9 import Cafe9Scraper
 
 
 class TestCafe9(unittest.TestCase):

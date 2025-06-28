@@ -2,7 +2,7 @@ import os
 import sqlite3
 from datetime import datetime
 
-from src.logger import create_logger_from_designated_logger
+from event_engine.logger import create_logger_from_designated_logger
 
 logger = create_logger_from_designated_logger(__name__)
 

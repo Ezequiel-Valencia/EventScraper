@@ -1,5 +1,5 @@
-from src.publishers.abc_publisher import Publisher
-from src.scrapers.abc_scraper import Scraper
+from event_engine.publishers.abc_publisher import Publisher
+from event_engine.scrapers.abc_scraper import Scraper
 
 
 class CustomScraperJob:
