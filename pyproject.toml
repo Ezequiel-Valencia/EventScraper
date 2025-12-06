@@ -1,29 +1,28 @@
-[tool.poetry]
+[project]
 name = "calendar_event_engine"
 version = "0.1.4"
 description = ""
-authors = ["Ezequiel Valencia"]
+authors = [{ name = "Ezequiel Valencia" }]
+requires-python = ">=3.10,<4"
 readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "^3.10"
-requests = "^2.31.0"
-gql = "3.5.0"
-pydantic = "^2.7.0"
-tenacity = "^8.2.3"
-requests-toolbelt = "^1.0.0"
-google-api-python-client = "^2.127.0"
-google-auth-httplib2 = "^0.2.0"
-google-auth-oauthlib = "^1.2.0"
-geopy = "^2.4.1"
-pytest = "^8.2.2"
-slack_sdk = "^3.32.0"
-icalendar = "^6.0.1"
-aiohttp = "^3.10.10"
-validators = "^0.34.0"
-pandas = "^2.2.3"
-beautifulsoup4 = "^4.13.4"
+dependencies = [
+    "requests>=2.31.0,<3",
+    "gql==3.5.0",
+    "pydantic>=2.7.0,<3",
+    "tenacity>=8.2.3,<9",
+    "requests-toolbelt>=1.0.0,<2",
+    "google-api-python-client>=2.127.0,<3",
+    "google-auth-httplib2>=0.2.0,<0.3",
+    "google-auth-oauthlib>=1.2.0,<2",
+    "geopy>=2.4.1,<3",
+    "pytest>=8.2.2,<9",
+    "slack_sdk>=3.32.0,<4",
+    "icalendar>=6.0.1,<7",
+    "aiohttp>=3.10.10,<4",
+    "validators>=0.34.0,<0.35",
+    "beautifulsoup4>=4.13.4,<5",
+]
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
