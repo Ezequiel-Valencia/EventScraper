@@ -86,9 +86,9 @@ class EventParameters:
             super().__init__(**args)
     
     class MediaInput(BaseModel):
-        mediaId: str = None
+        mediaUuid: str = None
         
-        def __init__(self, mediaId:str):
+        def __init__(self, mediaUuid:str):
             args = _generate_args(locals())
             super().__init__(**args)
         
