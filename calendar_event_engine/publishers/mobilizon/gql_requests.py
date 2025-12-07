@@ -64,11 +64,23 @@ class EventGQL:
             name: $name,
             actorId: $actorId
           ){
-            id
+            uuid
           }
         }
       """
       return gqlString
+
+    def deleteMediaRawGQL():
+        gqlString = """
+            mutation($uuid: UUID!){
+              removeMedia(
+                uuid: $uuid
+              ){
+                uuid
+              }
+            }
+          """
+        return gqlString
 
 #           {("picture: " + eventInformation.picture) + "," if eventInformation.picture != None else ""} 
 

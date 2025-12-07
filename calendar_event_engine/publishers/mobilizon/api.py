@@ -109,7 +109,20 @@ class MobilizonAPI:
             content = json.loads(response.content)
             if content is None or response.status_code != 200 or "errors" in content:
                 return ""
-            return content["data"]["uploadMedia"]["id"]
+            return content["data"]["uploadMedia"]["uuid"]
+
+    def delete_uploaded_file(self, uuid: str) -> str:
+        response = requests.post(self._mobilizon_client.endpoint,
+                      data={
+                          "query": EventGQL.deleteMediaRawGQL(),
+                          "variables": json.dumps({"uuid": uuid})
+                      },
+                      headers={'Authorization': f'Bearer {self._mobilizon_client.loginTokens.accessToken}',
+                              'accept': 'application/json'}
+                                 )
+
+        return json.loads(response.content)['data']['removeMedia']['uuid']
+
 
     def logout(self):
         self._mobilizon_client.log_out()
