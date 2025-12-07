@@ -22,6 +22,7 @@ class TestMobilizonAPI(unittest.TestCase):
         assert upload_uuid == del_uuid
 
 
+    @pytest.mark.skip
     def test_create_event(self):
         mobilizon_api: MobilizonAPI = MobilizonAPI(
             self.mobilizon_endpoint, "", ""

@@ -2,6 +2,7 @@ import json
 import os
 
 import validators
+
 from calendar_event_engine.db.db_cache import SQLiteDB
 from calendar_event_engine.db.event_source_driver import EventSource
 from calendar_event_engine.db.uploaded_events_driver import UploadedEventRow
@@ -10,7 +11,7 @@ from calendar_event_engine.publishers.abc_publisher import Publisher
 from calendar_event_engine.publishers.mobilizon.api import MobilizonAPI
 from calendar_event_engine.publishers.mobilizon.types import MobilizonEvent, EventParameters
 from calendar_event_engine.types.generics import GenericEvent
-from calendar_event_engine.types.submission import AllEventsFromAGroup, GroupEventsKernel
+from calendar_event_engine.types.submission import GroupEventsKernel
 
 logger = create_logger_from_designated_logger(__name__)
 
