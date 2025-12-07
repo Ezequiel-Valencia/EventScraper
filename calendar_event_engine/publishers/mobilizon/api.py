@@ -90,6 +90,14 @@ class MobilizonAPI:
 
         event_id = self._mobilizon_client.publish(EventGQL.createEventGQL(event_type))
         return {"id": event_id["createEvent"]["id"], "uuid": event_id["createEvent"]["uuid"]}
+
+    def delete_event(self, event_id: str) -> str:
+        response = requests.post(
+            self._mobilizon_client.endpoint,
+            data={"query": EventGQL.delete_event_gql(), "variables": json.dumps({"eventId": event_id})},
+            headers={'Authorization': self.bearer_token}
+        )
+        return json.loads(response.content)["data"]["deleteEvent"]["id"]
     
     def upload_file(self, file_path: str) -> str:
         with requests.get(file_path) as file:

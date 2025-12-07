@@ -55,6 +55,17 @@ class EventGQL:
         }}
     """
         return gql(gqlString)
+
+    @staticmethod
+    def delete_event_gql():
+        gql_string = """
+        mutation DeleteEvent($eventId: ID!) {
+          deleteEvent(eventId: $eventId) {
+            id
+          }
+        }
+        """
+        return gql_string
     
     def uploadMediaRawGQL():
       gqlString = """
