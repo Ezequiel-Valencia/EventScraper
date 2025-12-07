@@ -77,12 +77,11 @@ class _MobilizonClient:
 
 
 class MobilizonAPI:
-    _mobilizon_client: _MobilizonClient
-    bot_actor: Actor
-    
+
     def __init__(self, endpoint: str, email: str, password: str):
-        self._mobilizon_client = _MobilizonClient(endpoint, f'"{email}"', f'"{password}"')
-        self.bot_actor = Actor(**self.get_actors()["identities"][0])
+        self._mobilizon_client: _MobilizonClient = _MobilizonClient(endpoint, f'"{email}"', f'"{password}"')
+        self.bot_actor: Actor = Actor(**self.get_actors()["identities"][0])
+        self.bearer_token: str = f'Bearer {self._mobilizon_client.loginTokens.accessToken}'
         logger.info("Logged In Mobilizon")
 
     
@@ -103,8 +102,7 @@ class MobilizonAPI:
                 files= {
                     "uploaded-file": file.content
                 },
-                headers={'Authorization': f'Bearer {self._mobilizon_client.loginTokens.accessToken}',
-                         'accept': 'application/json'}
+                headers={'Authorization': self.bearer_token, 'accept': 'application/json'}
             )
             content = json.loads(response.content)
             if content is None or response.status_code != 200 or "errors" in content:
@@ -117,10 +115,7 @@ class MobilizonAPI:
                           "query": EventGQL.deleteMediaRawGQL(),
                           "variables": json.dumps({"uuid": uuid})
                       },
-                      headers={'Authorization': f'Bearer {self._mobilizon_client.loginTokens.accessToken}',
-                              'accept': 'application/json'}
-                                 )
-
+                      headers={'Authorization': self.bearer_token, 'accept': 'application/json'})
         return json.loads(response.content)['data']['removeMedia']['uuid']
 
 
