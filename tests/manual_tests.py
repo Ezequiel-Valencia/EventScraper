@@ -48,7 +48,7 @@ def manual_test_file_upload():
     event = MobilizonEvent(25, "Test", "Description", "2025-05-27T00:00:00-04:00")
     result = mobilizon_api.upload_file("https://cdn.britannica.com/92/100692-050-5B69B59B/Mallard.jpg")
     event.picture = EventParameters.MediaInput(result)
-    mobilizon_api.bot_created_event(event)
+    mobilizon_api.create_event(event)
 
 def manual_test_google_calendar(print_events:bool = False):
     google_calendar_api = GCalAPI()
@@ -91,8 +91,8 @@ def manual_test_cache_db():
 
 def get_event_bot_info():
     mobilizon_api = MobilizonAPI(endpoint, email, passwd)
-    print(mobilizon_api.getActors())
-    print(mobilizon_api.getGroups())
+    print(mobilizon_api.get_actors())
+    print(mobilizon_api.get_groups())
     mobilizon_api.logout()
 
 def _get_address_info():

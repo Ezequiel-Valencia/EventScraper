@@ -82,11 +82,11 @@ class MobilizonAPI:
     
     def __init__(self, endpoint: str, email: str, password: str):
         self._mobilizon_client = _MobilizonClient(endpoint, f'"{email}"', f'"{password}"')
-        self.bot_actor = Actor(**self.getActors()["identities"][0])
+        self.bot_actor = Actor(**self.get_actors()["identities"][0])
         logger.info("Logged In Mobilizon")
 
     
-    def bot_created_event(self, event_type: MobilizonEvent) -> dict:
+    def create_event(self, event_type: MobilizonEvent) -> dict:
         event_type.organizerActorId = self.bot_actor.id
 
         event_id = self._mobilizon_client.publish(EventGQL.createEventGQL(event_type))
@@ -128,9 +128,9 @@ class MobilizonAPI:
         self._mobilizon_client.log_out()
         logger.info("Logged Out")
     
-    def getActors(self):
+    def get_actors(self):
         return self._mobilizon_client.publish(ActorsGQL.getIdentities())
     
-    def getGroups(self):
+    def get_groups(self):
         return self._mobilizon_client.publish(ActorsGQL.getGroups('"eventbot"'))
 

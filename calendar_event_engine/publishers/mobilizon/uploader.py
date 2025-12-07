@@ -48,7 +48,7 @@ class MobilizonUploader(Publisher):
                 potential_id = self.mobilizonAPI.upload_file(event.picture.mediaUuid)
                 if potential_id != "":
                     event.picture.mediaUuid = potential_id
-            upload_response = self.mobilizonAPI.bot_created_event(event)
+            upload_response = self.mobilizonAPI.create_event(event)
             upload_response["groupId"] = event.attributedToId
             return upload_response
 
