@@ -40,7 +40,7 @@ class TestJSONParser(unittest.TestCase):
         self.assertEqual("Stonington Farmers Market", first_group.calendar_ids[0])
         self.assertEqual(25, mobilizon_metadata["groupID"]) # group ID
         self.assertEqual("food_drink", mobilizon_metadata["defaultCategory"])
-        self.assertEqual("96", mobilizon_metadata["defaultImageID"])
+        self.assertEqual("e6d64dd3-e4c6-4390-88ff-7de4f34be821", mobilizon_metadata["defaultImageID"])
         self.assertEqual(["Farmer Market"], mobilizon_metadata["defaultTags"])
 
     def test_runner_submission_json(self):
