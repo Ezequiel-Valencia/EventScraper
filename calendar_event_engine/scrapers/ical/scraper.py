@@ -1,9 +1,9 @@
 import copy
 import os
-import urllib.request
 from datetime import datetime, timedelta, timezone, date
 
 import icalendar
+import requests
 import validators
 from icalendar.cal import Calendar
 
@@ -33,10 +33,10 @@ class ICALScraper(Scraper):
         all_events: list[AllEventsFromAGroup] = []
         logger.info(f"Getting events from calendar {group_event_kernel.group_name}")
         for ical_id in group_event_kernel.calendar_ids:
-            with urllib.request.urlopen(ical_id) as f:
-                calendar = icalendar.Calendar.from_ical(f.read())
-                events = _hydrate_event_template(calendar, group_event_kernel.event_template)
-                all_events.append(AllEventsFromAGroup(events, group_event_kernel, ical_id))
+            cal_text = requests.get(ical_id).text
+            calendar = icalendar.Calendar.from_ical(cal_text)
+            events = _hydrate_event_template(calendar, group_event_kernel.event_template)
+            all_events.append(AllEventsFromAGroup(events, group_event_kernel, ical_id))
 
         return all_events
 

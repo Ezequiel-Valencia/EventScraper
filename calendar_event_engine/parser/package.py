@@ -1,5 +1,5 @@
 import json
-import urllib
+import requests
 
 from calendar_event_engine.types.generics import GenericAddress, GenericEvent
 from calendar_event_engine.types.submission import ScraperTypes, GroupPackage, TimeInfo, GroupEventsKernel
@@ -23,9 +23,7 @@ def retrieve_source_type(source_type_string) -> ScraperTypes:
 
 
 def get_group_package(json_path: str) -> GroupPackage:
-    group_schema: dict = None
-    with urllib.request.urlopen(json_path) as f:
-        group_schema = json.load(f)
+    group_schema: dict = json.loads(requests.get(json_path).text)
 
     group_package: GroupPackage = GroupPackage({}, none_if_not_present("name", group_schema),
                                                none_if_not_present("description", group_schema))
