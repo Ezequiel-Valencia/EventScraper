@@ -42,15 +42,19 @@ def _runner(runner_submission: RunnerSubmission, custom_scrapers: dict[Publisher
                                 scraper_type]
                             for event_kernel in group_event_kernels:
                                 event_kernel: GroupEventsKernel
+                                events: list[AllEventsFromAGroup] | None = None
                                 try:
-                                    events: list[AllEventsFromAGroup] = scraper.retrieve_from_source(event_kernel)
+                                    events = scraper.retrieve_from_source(event_kernel)
                                 except HTTPError as err:
                                     if err.code == 404:
                                         logger.warning(f"The following group is no longer available: {event_kernel.group_name}")
                                     else:
-                                        raise
-                                normalize_generic_event(events)
-                                publisher.upload(events)
+                                        logger.error(f"From source: {event_kernel.group_name}, the error code {err.code} was created when getting events.", exc_info=err)
+                                except ValueError as err:
+                                    logger.error(f"From source: {event_kernel.group_name} a value error was raised when getting events.", exc_info=err)
+                                if events is not None:
+                                    normalize_generic_event(events)
+                                    publisher.upload(events)
                             scraper.close_connection_to_source()
                         except ExpiredToken:
                             theres_an_expired_token = True
