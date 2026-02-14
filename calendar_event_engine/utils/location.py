@@ -1,5 +1,5 @@
 from geopy import Nominatim
-from geopy.exc import GeocoderTimedOut
+from geopy.exc import GeocoderTimedOut, GeocoderRateLimited
 
 from calendar_event_engine.logger import create_logger_from_designated_logger
 from calendar_event_engine.types.generics import GenericAddress
@@ -30,5 +30,6 @@ def find_geolocation_from_address(address: GenericAddress,
         address.geom = f"{geo_code_location.longitude};{geo_code_location.latitude}"
         logger.debug(f"{event_title}: Outsourced location was {address.street}, {address.locality}")
         return address, ""
-    except GeocoderTimedOut:
+    except (GeocoderTimedOut, GeocoderRateLimited) as err:
+        logger.debug(f"Unable to get coordinates for {event_title} with address {address}.", exc_info=err)
         return default_location, default_location_notif
