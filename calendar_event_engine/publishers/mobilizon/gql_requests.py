@@ -14,29 +14,35 @@ from calendar_event_engine.publishers.mobilizon.types import MobilizonEvent
 # Cleaning Received Text
 # https://stackoverflow.com/questions/10993612/how-to-remove-xa0-from-string-in-python
 
+
 def _conditional_attribute(key: str, value):
-  return ((key + ": " + str(value) + ",\n") if value is not None else "")
+    return (key + ": " + str(value) + ",\n") if value is not None else ""
 
 
 def conditional_gql_inputs(classDataObject: BaseModel or dict):
-  classDict: dict = classDataObject.dict() if isinstance(classDataObject, (BaseModel)) else classDataObject
-  gqlString = """"""
-  for key, value in classDict.items():
-    valueType = type(value)
-    if (valueType is str or valueType is int):
-      if (valueType is str):
-        value = value.replace('"', "'")
-        # value = re.sub(r"(\n{2,})|( +(?=\n))", "", value) #No multiple newlines in succession
-        value = f'"""{value}"""'
-      gqlString += _conditional_attribute(key, value)
-    elif (isinstance(value, Enum)):
-      value = value.value
-      gqlString += _conditional_attribute(key, value)
-    elif (valueType is dict and value is not None):
-      gqlString = f"""{gqlString}{key}:{{
+    classDict: dict = (
+        classDataObject.dict()
+        if isinstance(classDataObject, (BaseModel))
+        else classDataObject
+    )
+    gqlString = """"""
+    for key, value in classDict.items():
+        valueType = type(value)
+        if valueType is str or valueType is int:
+            if valueType is str:
+                value = value.replace('"', "'")
+                # value = re.sub(r"(\n{2,})|( +(?=\n))", "", value) #No multiple newlines in succession
+                value = f'"""{value}"""'
+            gqlString += _conditional_attribute(key, value)
+        elif isinstance(value, Enum):
+            value = value.value
+            gqlString += _conditional_attribute(key, value)
+        elif valueType is dict and value is not None:
+            gqlString = f"""{gqlString}{key}:{{
           {conditional_gql_inputs(value)}
         }},"""
-  return gqlString
+    return gqlString
+
 
 # conditional_gql_inputs(EventType(title="f", description="f", actorID=1, picture=EventParameters.MediaInput(name="fd", url="bar")))
 
@@ -66,9 +72,9 @@ class EventGQL:
         }
         """
         return gql_string
-    
+
     def uploadMediaRawGQL():
-      gqlString = """
+        gqlString = """
         mutation($file: Upload!, $name: String!, $actorId: ID){
           uploadMedia(
             file: $file,
@@ -79,7 +85,7 @@ class EventGQL:
           }
         }
       """
-      return gqlString
+        return gqlString
 
     def deleteMediaRawGQL():
         gqlString = """
@@ -93,7 +99,8 @@ class EventGQL:
           """
         return gqlString
 
-#           {("picture: " + eventInformation.picture) + "," if eventInformation.picture != None else ""} 
+
+#           {("picture: " + eventInformation.picture) + "," if eventInformation.picture != None else ""}
 
 # ==== GQL : credentials ====
 
@@ -103,9 +110,9 @@ class AuthenticationGQL:
         gqlString = f"""
       mutation {{
       login(
-      email: {email}, 
+      email: {email},
       password: {password}) {{
-        accessToken   
+        accessToken
         refreshToken
       }}
     }}
@@ -124,16 +131,16 @@ class AuthenticationGQL:
         gqlString = f"""
       mutation {{ RefreshToken(
       refreshToken: {refreshToken}) {{
-	    accessToken   
+	    accessToken
       refreshToken
       }}
     }}"""
         return gql(gqlString)
-    
+
 
 class ActorsGQL:
-  def getIdentities():
-    gqlString = """
+    def getIdentities():
+        gqlString = """
     query {
         identities{
           id
@@ -144,10 +151,10 @@ class ActorsGQL:
         }
       }
     """
-    return gql(gqlString)
-  
-  def getGroups(membershipName, page=1, limit=30):
-    gqlString = f"""
+        return gql(gqlString)
+
+    def getGroups(membershipName, page=1, limit=30):
+        gqlString = f"""
     query {{
       loggedUser{{
         id
@@ -172,7 +179,7 @@ class ActorsGQL:
       }}
     }}
     """
-    return gql(gqlString)
+        return gql(gqlString)
 
 
 # UPDATE_GQL = gql("""
@@ -281,15 +288,15 @@ class ActorsGQL:
 """
         mutation {{ createEvent(
           organizerActorId: {eventInformation.organizerActorId},
-          attributedToId: {eventInformation.attributedToId}, 
-          title: {eventInformation.title}, 
-          description: {eventInformation.description}, 
+          attributedToId: {eventInformation.attributedToId},
+          title: {eventInformation.title},
+          description: {eventInformation.description},
           beginsOn: "2020-10-29T00:00:00+01:00"
           endsOn: "2022-03-31T23:59:59+02:00"
-          status: {eventInformation.status}, 
-          visibility: {eventInformation.visibility}, 
-          joinOptions: {eventInformation.joinOptions}, 
-          draft: {eventInformation.draft}, 
+          status: {eventInformation.status},
+          visibility: {eventInformation.visibility},
+          joinOptions: {eventInformation.joinOptions},
+          draft: {eventInformation.draft},
           {_conditional_attribute("picture", eventInformation.picture)}
           {_conditional_attribute("onlineAddress", eventInformation.onlineAddress)}
           {_conditional_attribute("phoneAddress", eventInformation.phoneAddress)}

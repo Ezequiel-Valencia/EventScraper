@@ -168,3 +168,4 @@ event_cache.db
 docker.env
 
 config/
+.envrc

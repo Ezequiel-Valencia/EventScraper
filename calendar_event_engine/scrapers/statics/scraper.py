@@ -5,13 +5,16 @@ from datetime import datetime, timedelta
 from calendar_event_engine.logger import create_logger_from_designated_logger
 from calendar_event_engine.scrapers.abc_scraper import Scraper
 from calendar_event_engine.types.generics import GenericEvent
-from calendar_event_engine.types.submission import ScraperTypes, GroupEventsKernel, AllEventsFromAGroup
+from calendar_event_engine.types.submission import (
+    ScraperTypes,
+    GroupEventsKernel,
+    AllEventsFromAGroup,
+)
 
 logger = create_logger_from_designated_logger(__name__)
 
 
 class StaticScraper(Scraper):
-
     def close_connection_to_source(self) -> None:
         pass
 
@@ -21,17 +24,22 @@ class StaticScraper(Scraper):
     def connect_to_source(self):
         pass
 
-    def retrieve_from_source(self, group_kernel: GroupEventsKernel) -> [AllEventsFromAGroup]:
+    def retrieve_from_source(
+        self, group_kernel: GroupEventsKernel
+    ) -> [AllEventsFromAGroup]:
         logger.info(f"Getting static events: {group_kernel.group_name}")
-        events: [GenericEvent] = hydrate_event_template_with_legitimate_times(group_kernel)
+        events: [GenericEvent] = hydrate_event_template_with_legitimate_times(
+            group_kernel
+        )
         event: GenericEvent
         for event in events:
             event.description = f"Automatically scraped by event bot: \n\n{event.description} \n\n Source for farmer market info: https://portal.ct.gov/doag/adarc/adarc/farmers-market-nutrition-program/authorized-redemption-locations"
         return [AllEventsFromAGroup(events, group_kernel, group_kernel.group_name)]
 
 
-
-def hydrate_event_template_with_legitimate_times(group_kernel: GroupEventsKernel) -> [GenericEvent]:
+def hydrate_event_template_with_legitimate_times(
+    group_kernel: GroupEventsKernel,
+) -> [GenericEvent]:
     """
     Updating the initial default times from the static event to their relevant times for the week, unless
     the end date has been reached.
@@ -53,7 +61,9 @@ def hydrate_event_template_with_legitimate_times(group_kernel: GroupEventsKernel
             start_time = datetime.fromisoformat(t[0])
             end_time = datetime.fromisoformat(t[1])
 
-            time_difference_weeks = (now - start_time).days // 7  # Floor division that can result in week prior event
+            time_difference_weeks = (
+                now - start_time
+            ).days // 7  # Floor division that can result in week prior event
 
             start_time += timedelta(weeks=time_difference_weeks)
             end_time += timedelta(weeks=time_difference_weeks)

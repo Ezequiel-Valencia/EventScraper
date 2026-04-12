@@ -1,3 +1,4 @@
+import os
 import unittest
 
 import pytest
@@ -12,28 +13,27 @@ from calendar_event_engine.publishers.mobilizon.types import MobilizonEvent
 class TestMobilizonAPI(unittest.TestCase):
     mobilizon_endpoint = "https://ctgrassroots.org/graphiql"
 
-    @pytest.mark.skip("Should be run manually")
+    @pytest.mark.skipif(os.getenv("BOT_EMAIL") is None, reason="No bot specified.")
     def test_upload_n_delete_pictures(self):
-        mobilizon_api: MobilizonAPI = MobilizonAPI(
-            self.mobilizon_endpoint, "", ""
+        mobilizon_api: MobilizonAPI = MobilizonAPI(self.mobilizon_endpoint, os.getenv("BOT_EMAIL"), password=os.getenv("BOT_PASSWORD"))
+        upload_uuid = mobilizon_api.upload_file(
+            "https://cdn.britannica.com/92/100692-050-5B69B59B/Mallard.jpg"
         )
-        upload_uuid = mobilizon_api.upload_file("https://cdn.britannica.com/92/100692-050-5B69B59B/Mallard.jpg")
         del_uuid = mobilizon_api.delete_uploaded_file(upload_uuid)
         assert upload_uuid == del_uuid
 
-
-    @pytest.mark.skip
+    @pytest.mark.skipif(os.getenv("BOT_EMAIL") is None, reason="No bot specified.")
     def test_create_event(self):
-        mobilizon_api: MobilizonAPI = MobilizonAPI(
-            self.mobilizon_endpoint, "", ""
-        )
+        mobilizon_api: MobilizonAPI = MobilizonAPI(self.mobilizon_endpoint, os.getenv("BOT_EMAIL"), password=os.getenv("BOT_PASSWORD"))
         event = MobilizonEvent(
-            attributedToId=27, title="Test", description="Test", beginsOn="2025-05-25T00:00:00-04:00"
+            attributedToId=27,
+            title="Test",
+            description="Test",
+            beginsOn="2025-05-25T00:00:00-04:00",
         )
-        event_id = mobilizon_api.create_event(event)['id']
+        event_id = mobilizon_api.create_event(event)["id"]
         del_id = mobilizon_api.delete_event(event_id)
         assert event_id == del_id
-
 
 
 if __name__ == "__main__":

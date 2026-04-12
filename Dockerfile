@@ -58,4 +58,3 @@ RUN set -eux; \
 # verify that the binary works
 	gosu nobody true
 ENTRYPOINT ["/app/entrypoint.sh"]
-

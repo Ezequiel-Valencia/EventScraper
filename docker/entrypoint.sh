@@ -17,4 +17,3 @@ if [ "$(id -u)" -eq 0 ]; then
 else
   poetry run python /app/calendar_event_engine/Runner.py
 fi
-
