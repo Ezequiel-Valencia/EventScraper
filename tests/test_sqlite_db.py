@@ -138,6 +138,7 @@ class TestEventTable(unittest.TestCase):
 
         self.insertGroup(db, self.group2, self.group2Source)
         lastEventUploaded = db.get_last_event_date_for_source_id(self.sourceGroup2)
+        assert lastEventUploaded is not None
         self.assertEqual("2027-02-04T10:00:00-04:00", lastEventUploaded.isoformat())
 
 

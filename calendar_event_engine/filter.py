@@ -19,10 +19,10 @@ def normalize_generic_event(events_to_upload_list: list[AllEventsFromAGroup]):
             if generic_event.picture is not None and validators.url(
                 generic_event.picture
             ):
-                picture_head = requests.head(generic_event.picture)
+                picture_head = requests.head(generic_event.picture, timeout=30)
                 if (
                     picture_head.status_code != 200
-                    and picture_head.headers.get("Content-type")
+                    or picture_head.headers.get("Content-type")
                     not in allowed_image_content_type_header
                 ):
                     generic_event.picture = ""

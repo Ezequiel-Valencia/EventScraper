@@ -35,7 +35,7 @@ class CombineDBDriver:
 
     def get_last_event_date_for_source_id(
         self, db_connection: sqlite3.Connection, calendar_id
-    ) -> datetime:
+    ) -> datetime | None:
         db_cursor = db_connection.cursor()
         res = db_cursor.execute(
             f"""SELECT date FROM {self.uploaded_events_table_name}
@@ -47,7 +47,10 @@ class CombineDBDriver:
         )
         # Conversion to ISO format does not like the Z, that represents UTC aka no time zone
         # so using +00:00 is an equivalent to it
-        date_string = res.fetchone()[0]
+        fetched = res.fetchone()
+        if fetched is None:
+            return None
+        date_string = fetched[0]
         logger.debug(f"Last date found for calendar ID {calendar_id}: {date_string}")
         return datetime.fromisoformat(date_string)
 

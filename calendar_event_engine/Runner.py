@@ -17,11 +17,47 @@ from calendar_event_engine.types.submission import (
     GroupPackage,
     AllEventsFromAGroup,
     GroupEventsKernel,
+    ScraperTypes,
 )
 from calendar_event_engine.types.submission_handlers import RunnerSubmission
 from calendar_event_engine.scrapers.google_calendar.api import ExpiredToken
 
 logger = create_logger_from_designated_logger(__name__)
+
+
+def _scraper_scrapes_and_publishes(
+    scraper: Scraper,
+    scraper_type: ScraperTypes,
+    publisher: Publisher,
+    group_package: GroupPackage,
+):
+    scraper.connect_to_source()
+    group_event_kernels: list[GroupEventsKernel] = (
+        group_package.scraper_type_and_kernels[scraper_type]
+    )
+    for event_kernel in group_event_kernels:
+        events: list[AllEventsFromAGroup] | None = None
+        try:
+            events = scraper.retrieve_from_source(event_kernel)
+        except HTTPError as err:
+            if err.code == 404:
+                logger.warning(
+                    f"The following group is no longer available: {event_kernel.group_name}"
+                )
+            else:
+                logger.error(
+                    f"From source: {event_kernel.group_name}, the error code {err.code} was created when getting events.",
+                    exc_info=err,
+                )
+        except ValueError as err:
+            logger.error(
+                f"From source: {event_kernel.group_name} a value error was raised when getting events.",
+                exc_info=err,
+            )
+        if events is not None:
+            normalize_generic_event(events)
+            publisher.upload(events)
+    scraper.close_connection_to_source()
 
 
 def _runner(
@@ -47,39 +83,18 @@ def _runner(
                             scraper_type
                         ]
                         try:
-                            scraper.connect_to_source()
-                            group_event_kernels: list[GroupEventsKernel] = (
-                                group_package.scraper_type_and_kernels[scraper_type]
+                            _scraper_scrapes_and_publishes(
+                                scraper=scraper,
+                                scraper_type=scraper_type,
+                                publisher=publisher,
+                                group_package=group_package,
                             )
-                            for event_kernel in group_event_kernels:
-                                events: list[AllEventsFromAGroup] | None = None
-                                try:
-                                    events = scraper.retrieve_from_source(event_kernel)
-                                except HTTPError as err:
-                                    if err.code == 404:
-                                        logger.warning(
-                                            f"The following group is no longer available: {event_kernel.group_name}"
-                                        )
-                                    else:
-                                        logger.error(
-                                            f"From source: {event_kernel.group_name}, the error code {err.code} was created when getting events.",
-                                            exc_info=err,
-                                        )
-                                except ValueError as err:
-                                    logger.error(
-                                        f"From source: {event_kernel.group_name} a value error was raised when getting events.",
-                                        exc_info=err,
-                                    )
-                                if events is not None:
-                                    normalize_generic_event(events)
-                                    publisher.upload(events)
-                            scraper.close_connection_to_source()
                         except ExpiredToken:
                             theres_an_expired_token = True
                             logger.warning(
                                 "Expired token.json needs to be replaced. Will continue scraping other types"
                             )
-                            continue
+
                 publisher.close()
 
             if custom_scrapers:

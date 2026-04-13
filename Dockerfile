@@ -1,4 +1,4 @@
-FROM ubuntu:latest
+FROM ubuntu:24.04
 USER root
 
 ENV GOOGLE_APPLICATION_CREDENTIALS=/app/config/adc.json

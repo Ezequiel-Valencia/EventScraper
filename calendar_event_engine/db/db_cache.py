@@ -49,7 +49,7 @@ class SQLiteDB:
             self.sql_db_connection, source
         )
 
-    def get_last_event_date_for_source_id(self, calendar_id) -> datetime:
+    def get_last_event_date_for_source_id(self, calendar_id) -> datetime | None:
         return self.com_driver.get_last_event_date_for_source_id(
             self.sql_db_connection, calendar_id
         )
