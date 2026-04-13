@@ -31,7 +31,16 @@ def retrieve_source_type(source_type_string) -> ScraperTypes:
 
 
 def get_group_package(json_path: str) -> GroupPackage:
-    group_schema: dict = json.loads(requests.get(json_path).text)
+    try:
+        response = requests.get(json_path, timeout=30)
+        response.raise_for_status()
+        group_schema: dict = response.json()
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(
+            f"Failed to fetch group package from {json_path}: {e}"
+        ) from e
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"Invalid JSON received from {json_path}: {e}") from e
 
     group_package: GroupPackage = GroupPackage(
         {},

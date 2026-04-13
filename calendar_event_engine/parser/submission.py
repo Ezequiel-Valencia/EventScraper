@@ -1,3 +1,5 @@
+import json
+
 import requests
 
 from calendar_event_engine.db.db_cache import SQLiteDB
@@ -22,7 +24,18 @@ logger = create_logger_from_designated_logger(__name__)
 def get_runner_submission(
     remote_submission_url: str, test_mode: bool, cache_db: SQLiteDB
 ) -> RunnerSubmission:
-    json_submission: dict = requests.get(remote_submission_url).json()
+    try:
+        response = requests.get(remote_submission_url, timeout=30)
+        response.raise_for_status()
+        json_submission: dict = response.json()
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(
+            f"Failed to fetch runner submission from {remote_submission_url}: {e}"
+        ) from e
+    except json.JSONDecodeError as e:
+        raise RuntimeError(
+            f"Invalid JSON received from {remote_submission_url}: {e}"
+        ) from e
 
     publisher_package: dict[Publisher, list[GroupPackage]] = dict()
     respective_scrapers: dict[ScraperTypes, Scraper] = dict()

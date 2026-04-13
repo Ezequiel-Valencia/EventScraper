@@ -1,0 +1,19 @@
+{
+    "name": "Test Package",
+    "description": "A test package",
+    "groupKernels": {
+        "Test Group": {
+            "publisherInfo": {
+                "mobilizon": {
+                    "groupID": 1,
+                    "defaultCategory": "music",
+                    "defaultImageID": "123",
+                    "defaultTags": ["Test"]
+                }
+            },
+            "onlineAddress": "https://example.com",
+            "calendarIDs": ["test-calendar-id"],
+            "calendarType": "GOOGLE_CAL"
+        }
+    }
+}
