@@ -1,6 +1,6 @@
 import copy
 import os
-from datetime import datetime, timedelta, timezone, date
+from datetime import datetime, timedelta, timezone
 
 import icalendar
 import requests
@@ -9,7 +9,6 @@ from icalendar.cal import Calendar
 
 from calendar_event_engine.db.db_cache import SQLiteDB
 from calendar_event_engine.logger import create_logger_from_designated_logger
-from calendar_event_engine.publishers.mobilizon.api import logger
 from calendar_event_engine.scrapers.abc_scraper import Scraper
 from calendar_event_engine.types.generics import GenericEvent, GenericAddress
 from calendar_event_engine.types.submission import (
@@ -35,8 +34,9 @@ class ICALScraper(Scraper):
         self.cache_db = cache_db
 
     def retrieve_from_source(
-        self, group_event_kernel: GroupEventsKernel
+        self, group_event_kernel: GroupEventsKernel | None = None
     ) -> list[AllEventsFromAGroup]:
+        assert group_event_kernel is not None
         all_events: list[AllEventsFromAGroup] = []
         logger.info(f"Getting events from calendar {group_event_kernel.group_name}")
         for ical_id in group_event_kernel.calendar_ids:
@@ -63,10 +63,10 @@ def _hydrate_event_template(
     for event in calendar.walk("VEVENT"):
         event_template = copy.deepcopy(event_kernel)
         start = event.start
-        if type(start) == date:
+        if not isinstance(start, datetime):
             start = datetime.combine(start, datetime.min.time(), timezone.utc)
         end = event.end
-        if type(end) == date:
+        if not isinstance(end, datetime):
             end = datetime.combine(end, datetime.min.time(), timezone.utc)
         summary = str(event.get("SUMMARY"))
         status = event.get("STATUS")
@@ -109,8 +109,8 @@ def _hydrate_event_template(
 
 
 def _parse_retrieved_location(
-    location: str, default_location: GenericAddress
-) -> GenericAddress:
+    location: str, default_location: GenericAddress | None
+) -> GenericAddress | None:
     if location is None:
         logger.debug("No location provided, using default")
         return default_location

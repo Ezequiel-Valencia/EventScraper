@@ -69,16 +69,16 @@ class EventParameters:
             originId: The ID affiliated with the api that gave the location info
         """
 
-        geom: str = None
+        geom: str | None = None
         locality: str  # Town
         postalCode: str  # ZipCode
         street: str  # Street
         country: str  #
-        type: str = None
+        type: str | None = None
         region: str = ""
         timezone: str = "America/New_York"
         description: str = ""
-        originId: str = None
+        originId: str | None = None
 
         def __init__(
             self,
@@ -86,18 +86,18 @@ class EventParameters:
             postalCode: str = "",
             street: str = "",
             country: str = "United States",
-            type=None,
-            originId=None,
+            type: str | None = None,
+            originId: str | None = None,
             region: str = "Connecticut",
-            geom: str = None,
-            timezone="America/New_York",
-            description="",
+            geom: str | None = None,
+            timezone: str = "America/New_York",
+            description: str = "",
         ):
             args = _generate_args(locals())
             super().__init__(**args)
 
     class MediaInput(BaseModel):
-        mediaUuid: str = None
+        mediaUuid: str | None = None
 
         def __init__(self, mediaUuid: str):
             args = _generate_args(locals())
@@ -116,34 +116,36 @@ class MobilizonEvent(BaseModel):
     organizerActorId: int = 0  # Actor ID
     attributedToId: int = 0  # Group ID
     title: str = ""
-    description: str = None
+    description: str | None = None
     beginsOn: str = "2020-10-29T00:00:00+01:00"
-    endsOn: str = None
+    endsOn: str | None = None
     status: EventParameters.Status = EventParameters.Status.confirmed
     visibility: EventParameters.Visibility = EventParameters.Visibility.public
     joinOptions: EventParameters.JoinOptions = EventParameters.JoinOptions.free
-    draft: str = None
+    draft: str | None = None
     tags: list[str] = []
-    picture: EventParameters.MediaInput = None  # https://github.com/framasoft/mobilizon/blob/main/lib/graphql/schema/media.ex
-    onlineAddress: str = None
-    phoneAddress: str = None
-    category: EventParameters.Categories = None
-    physicalAddress: EventParameters.Address = None
+    picture: EventParameters.MediaInput | None = (
+        None  # https://github.com/framasoft/mobilizon/blob/main/lib/graphql/schema/media.ex
+    )
+    onlineAddress: str | None = None
+    phoneAddress: str | None = None
+    category: EventParameters.Categories | None = None
+    physicalAddress: EventParameters.Address | None = None
     # options: dict = {}
-    contacts: str = None
+    contacts: str | None = None
 
     def __init__(
         self,
         attributedToId: int,
         title: str,
-        description: str,
+        description: str | None,
         beginsOn: str,
-        onlineAddress: str = None,
-        endsOn: str = None,
-        physicalAddress: EventParameters.Address = None,
-        category: EventParameters.Categories = None,
-        tags: [] = None,
-        picture: EventParameters.MediaInput = None,
+        onlineAddress: str | None = None,
+        endsOn: str | None = None,
+        physicalAddress: EventParameters.Address | None = None,
+        category: EventParameters.Categories | None = None,
+        tags: list[str] | None = None,
+        picture: EventParameters.MediaInput | None = None,
     ):
         args = _generate_args(locals())
         super().__init__(**args)

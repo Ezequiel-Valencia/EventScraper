@@ -33,6 +33,9 @@ class Publisher(ABC):
             all_events = events_to_upload.events
             event_kernel = events_to_upload.eventKernel
             source_id = events_to_upload.calendar_id
+            if all_events is None:
+                continue
+            assert event_kernel is not None
             for generic_event in all_events:
                 try:
                     if not self.cache_db.entry_already_in_cache(
@@ -60,7 +63,7 @@ class Publisher(ABC):
         event_kernel: GroupEventsKernel,
         generic_event: GenericEvent,
         calendar_id: str,
-    ) -> (UploadedEventRow, EventSource):
+    ) -> tuple[UploadedEventRow, EventSource]:
         pass
 
     @abstractmethod

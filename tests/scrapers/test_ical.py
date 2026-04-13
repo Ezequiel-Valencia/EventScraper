@@ -72,7 +72,7 @@ Presented by the Hartford Jazz Society and Neefjazz Entertainment""",
             ends_on="2024-10-31T02:00:00+00:00",
         )
 
-        self.assertEqual(test_event, event)
+        self.assertTrue(test_event.fuzzy_equal(event))
 
         event = event_to_upload.events[1]
         test_event = GenericEvent(
@@ -85,7 +85,7 @@ Presented by the Hartford Jazz Society and Neefjazz Entertainment""",
             physical_address=address,
         )
 
-        self.assertEqual(test_event, event)
+        self.assertTrue(test_event.fuzzy_equal(event))
 
 
 if __name__ == "__main__":

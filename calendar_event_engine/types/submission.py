@@ -19,7 +19,7 @@ class TimeInfo:
     Used to hydrate the static event schema,
     """
 
-    default_times: []
+    default_times: list
     end_time: str
 
     def __init__(self, default_times, end_time):
@@ -98,8 +98,8 @@ class AllEventsFromAGroup:
         source_id: The specific calendar where all the events scrapped originated from.
     """
 
-    events: list[GenericEvent] = None
-    eventKernel: GroupEventsKernel = None
+    events: list[GenericEvent] | None = None
+    eventKernel: GroupEventsKernel | None = None
     calendar_id: str = ""
 
     def __init__(

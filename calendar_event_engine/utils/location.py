@@ -16,12 +16,16 @@ def _generate_args(local_variables: dict) -> dict:
 
 
 def find_geolocation_from_address(
-    address: GenericAddress, default_location: GenericAddress, event_title: str
-) -> (GenericAddress, str):
+    address: GenericAddress | None,
+    default_location: GenericAddress | None,
+    event_title: str | None,
+) -> tuple[GenericAddress | None, str]:
     # Address given is default, so don't need to call Nominatim
     default_location_notif = (
         "with unverified location for address. Please check address on their website"
     )
+    if address is None:
+        return default_location, default_location_notif
     if default_location == address:
         logger.debug(
             f"{event_title} location included with calendar, but is same as default location."

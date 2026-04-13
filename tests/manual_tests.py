@@ -1,7 +1,7 @@
 import json
 import logging
 import os
-from datetime import timezone, timedelta, datetime
+from datetime import timedelta, datetime
 
 from geopy.geocoders import Nominatim
 
@@ -14,12 +14,12 @@ from calendar_event_engine.publishers.mobilizon.types import (
     MobilizonEvent,
 )
 from calendar_event_engine.scrapers.google_calendar.api import GCalAPI
+from calendar_event_engine.parser.package import get_group_package
 from calendar_event_engine.scrapers.ical.scraper import ICALScraper
 from calendar_event_engine.types.generics import GenericEvent
 from calendar_event_engine.types.submission import (
     GroupEventsKernel,
     ScraperTypes,
-    GroupPackage,
 )
 
 endpoint = os.environ.get("MOBILIZON_ENDPOINT")
@@ -30,13 +30,11 @@ passwd = os.environ.get("MOBILIZON_PASSWORD")
 def manual_test_creation():
     mobilizon_api = MobilizonAPI(endpoint, email, passwd)
     # Time object requires timeZone
-    begins_on = datetime(2024, 7, 7, 14, 35, tzinfo=timezone.utc)
-    ends_on = datetime(2024, 7, 7, 17, 45, tzinfo=timezone.utc)
     geo_locator = Nominatim(user_agent="manual test creation")
     location = geo_locator.geocode("250 State St, New Haven, CT 06510").raw
     geom = f"{location['lon']};{location['lat']}"
     print(geom)
-    cafe9_local = EventParameters.Address(
+    EventParameters.Address(
         locality="New Haven",
         postalCode="06510",
         street="250 State St",
@@ -159,10 +157,8 @@ def manual_test_ical():
 
 
 def manual_test_upload():
-    cache_db = SQLiteDB(True)
-    group_package: GroupPackage = get_group_package(
-        "https://kernel.ctgrassroots.org/Group%Packages/volunteer.json"
-    )
+    SQLiteDB(True)
+    get_group_package("https://kernel.ctgrassroots.org/Group%Packages/volunteer.json")
 
 
 if __name__ == "__main__":

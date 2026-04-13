@@ -1,4 +1,3 @@
-from calendar_event_engine.publishers.abc_publisher import Publisher
 from calendar_event_engine.scrapers.abc_scraper import Scraper
 
 

@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Union
 
 from gql import gql
 from pydantic import BaseModel
@@ -19,7 +20,7 @@ def _conditional_attribute(key: str, value):
     return (key + ": " + str(value) + ",\n") if value is not None else ""
 
 
-def conditional_gql_inputs(classDataObject: BaseModel or dict):
+def conditional_gql_inputs(classDataObject: Union[BaseModel, dict]):
     classDict: dict = (
         classDataObject.dict()
         if isinstance(classDataObject, (BaseModel))
@@ -49,6 +50,7 @@ def conditional_gql_inputs(classDataObject: BaseModel or dict):
 
 # ==== GQL : Events ====
 class EventGQL:
+    @staticmethod
     def createEventGQL(eventInformation: MobilizonEvent):
         gqlString = f"""
         mutation {{ createEvent(
@@ -73,6 +75,7 @@ class EventGQL:
         """
         return gql_string
 
+    @staticmethod
     def uploadMediaRawGQL():
         gqlString = """
         mutation($file: Upload!, $name: String!, $actorId: ID){
@@ -87,6 +90,7 @@ class EventGQL:
       """
         return gqlString
 
+    @staticmethod
     def deleteMediaRawGQL():
         gqlString = """
             mutation($uuid: UUID!){
@@ -106,6 +110,7 @@ class EventGQL:
 
 
 class AuthenticationGQL:
+    @staticmethod
     def loginGQL(email, password):
         gqlString = f"""
       mutation {{
@@ -119,6 +124,7 @@ class AuthenticationGQL:
     """
         return gql(gqlString)
 
+    @staticmethod
     def logoutGQL(refreshToken):
         gqlString = f"""
       mutation {{
@@ -127,6 +133,7 @@ class AuthenticationGQL:
     """
         return gql(gqlString)
 
+    @staticmethod
     def refreshTokenGQL(refreshToken):
         gqlString = f"""
       mutation {{ RefreshToken(
@@ -139,6 +146,7 @@ class AuthenticationGQL:
 
 
 class ActorsGQL:
+    @staticmethod
     def getIdentities():
         gqlString = """
     query {
@@ -153,6 +161,7 @@ class ActorsGQL:
     """
         return gql(gqlString)
 
+    @staticmethod
     def getGroups(membershipName, page=1, limit=30):
         gqlString = f"""
     query {{

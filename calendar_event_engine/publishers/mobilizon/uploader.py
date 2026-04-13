@@ -53,7 +53,11 @@ class MobilizonUploader(Publisher):
             }
         else:
             upload_response: dict = {}
-            if event.picture is not None and validators.url(event.picture.mediaUuid):
+            if (
+                event.picture is not None
+                and event.picture.mediaUuid is not None
+                and validators.url(event.picture.mediaUuid)
+            ):
                 potential_id = self.mobilizonAPI.upload_file(event.picture.mediaUuid)
                 if potential_id != "":
                     event.picture.mediaUuid = potential_id
@@ -78,7 +82,7 @@ class MobilizonUploader(Publisher):
         )
         upload_source = EventSource(
             uuid=upload_response["uuid"],
-            website_url=event.online_address,
+            website_url=event.online_address or "",
             calendar_id=source_id,
             source_type=event_kernel.scraper_type.value,
         )
@@ -107,7 +111,8 @@ class MobilizonUploader(Publisher):
             else EventParameters.Categories[mobilizon_metadata["defaultCategory"]]
         )
 
-        if validators.url(generic_event.picture):
+        mobilizon_picture: EventParameters.MediaInput | None
+        if generic_event.picture is not None and validators.url(generic_event.picture):
             mobilizon_picture = EventParameters.MediaInput(generic_event.picture)
         else:
             mobilizon_picture = (
@@ -124,14 +129,14 @@ class MobilizonUploader(Publisher):
         generic_physical_address = generic_event.physical_address
         mobilizon_physical_address = (
             None
-            if generic_physical_address == None
+            if generic_physical_address is None
             else EventParameters.Address(
-                locality=generic_physical_address.locality,
-                postalCode=generic_physical_address.postalCode,
-                street=generic_physical_address.street,
+                locality=generic_physical_address.locality or "",
+                postalCode=generic_physical_address.postalCode or "",
+                street=generic_physical_address.street or "",
                 geom=generic_physical_address.geom,
                 country=generic_physical_address.country,
-                region=generic_physical_address.region,
+                region=generic_physical_address.region or "",
                 timezone=generic_physical_address.timezone,
                 description=generic_physical_address.description,
             )

@@ -80,7 +80,7 @@ class GCalAPI:
         eventKernel: GenericEvent,
         calendarId: str,
         checkCacheFunction,
-        dateOfLastEventScraped: datetime = None,
+        dateOfLastEventScraped: datetime | None = None,
     ) -> list[GenericEvent]:
         """Get events all events for that specific calender a week from today.
 
@@ -96,14 +96,14 @@ class GCalAPI:
                 stringDateLastEvent = dateOfLastEventScraped.isoformat()
             logger.debug(f"Time of last event: {stringDateLastEvent}")
             weekFromNow = datetime.utcnow().astimezone() + timedelta(days=7)
-            weekFromNow = weekFromNow.isoformat()
+            weekFromNowStr = weekFromNow.isoformat()
 
             events_result = (
                 self._apiClient.events()
                 .list(
                     calendarId=calendarId,
                     timeMin=stringDateLastEvent,
-                    timeMax=weekFromNow,
+                    timeMax=weekFromNowStr,
                     singleEvents=True,
                     orderBy="startTime",
                 )
@@ -114,7 +114,7 @@ class GCalAPI:
                 logger.info(f"No upcoming events for calendarID {calendarId}\n")
                 return googleEvents
 
-            events = []
+            events: list[GenericEvent] = []
             for googleEvent in googleEvents:
                 _process_google_event(
                     googleEvent=googleEvent,
@@ -127,6 +127,7 @@ class GCalAPI:
             return events
         except HttpError as error:
             logger.error(f"An error occurred: {error}")
+            return []
 
     def close(self):
         self._apiClient.close()
@@ -134,7 +135,7 @@ class GCalAPI:
 
 def _process_google_event(
     googleEvent: dict,
-    eventsToUpload: [],
+    eventsToUpload: list,
     checkCacheForEvent,
     calendarId: str,
     eventKernel: GenericEvent,
@@ -144,7 +145,12 @@ def _process_google_event(
     title = googleEvent.get("summary")
     description = googleEvent.get("description")
 
-    if None not in [starTimeGoogleEvent, endTimeGooglEvent, title, description]:
+    if (
+        starTimeGoogleEvent is not None
+        and endTimeGooglEvent is not None
+        and title is not None
+        and description is not None
+    ):
         startDateTime = datetime.fromisoformat(
             starTimeGoogleEvent.replace("Z", "+00:00")
         ).astimezone()
@@ -163,11 +169,13 @@ def _process_google_event(
             eventKernel.ends_on = endDateTime.isoformat()
             eventKernel.physical_address = eventAddress
             eventKernel.title = title
-            eventKernel.description = f"Automatically scraped by Event Bot {default_location_notif}: \n\n{description}"
+            eventKernel.description = f"Automatically scraped by Event Bot {default_location_notif}: \n\n{str(description)}"
             eventsToUpload.append(eventKernel)
 
 
-def parse_google_location(location: str, default_location: GenericAddress):
+def parse_google_location(
+    location: str | None, default_location: GenericAddress | None
+) -> GenericAddress | None:
     if location is None:
         logger.debug("No location provided, using default")
         return default_location
@@ -205,4 +213,5 @@ def parse_google_location(location: str, default_location: GenericAddress):
 if __name__ == "__main__":
     gcal = GCalAPI()
     google_token_path = os.environ.get("GOOGLE_API_TOKEN_PATH")
-    gcal.init_calendar_read_client_browser(google_token_path)
+    if google_token_path is not None:
+        gcal.init_calendar_read_client_browser(google_token_path)

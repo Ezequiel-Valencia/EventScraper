@@ -18,7 +18,7 @@ class Scraper(ABC):
 
     @abstractmethod
     def retrieve_from_source(
-        self, event_kernel: GroupEventsKernel = None
+        self, event_kernel: GroupEventsKernel | None = None
     ) -> list[AllEventsFromAGroup]:
         """
         Takes GroupEventKernel and returns list[EventsToUploadFromCalendarID]

@@ -2,11 +2,9 @@ import json
 
 import requests
 from gql import Client
-from gql.transport.aiohttp import AIOHTTPTransport
-from gql.transport.requests import RequestsHTTPTransport
+from gql.transport.httpx import HTTPXTransport
 from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
 
-import aiohttp
 from calendar_event_engine.logger import create_logger_from_designated_logger
 from calendar_event_engine.publishers.mobilizon.gql_requests import (
     EventGQL,
@@ -37,10 +35,10 @@ class _MobilizonClient:
             self.accessToken = access_token
             self.refreshToken = refresh_token
 
-    loginTokens: LoginTokens = None
-    client: Client = None
-    endpoint: str = None
-    headers: dict = None
+    loginTokens: LoginTokens
+    client: Client
+    endpoint: str
+    headers: dict
 
     def __init__(self, endpoint: str, email: str, password: str):
         self.endpoint = endpoint
@@ -55,11 +53,10 @@ class _MobilizonClient:
         if bearer is not None:
             self.headers["Authorization"] = "Bearer " + bearer
 
-        transport = RequestsHTTPTransport(
+        transport = HTTPXTransport(
             url=self.endpoint,
             headers=self.headers,
             verify=True,
-            # retries=3,
         )
         return Client(transport=transport, fetch_schema_from_transport=True)
 

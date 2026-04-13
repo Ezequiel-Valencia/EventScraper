@@ -17,7 +17,7 @@ from calendar_event_engine.scrapers.statics.scraper import StaticScraper
 class TestJSONParser(unittest.TestCase):
     def test_gcal_event_kernel(self):
         google_calendars: GroupPackage = get_group_package(
-            f"https://kernels.ctgrassroots.org/Group%20Packages/libraries.json",
+            "https://kernels.ctgrassroots.org/Group%20Packages/libraries.json",
         )
         first_group: GroupEventsKernel = google_calendars.scraper_type_and_kernels[
             ScraperTypes.GOOGLE_CAL
@@ -39,7 +39,7 @@ class TestJSONParser(unittest.TestCase):
 
     def test_farmers_event_kernel(self):
         farmers_market: GroupPackage = get_group_package(
-            f"https://kernels.ctgrassroots.org/Group%20Packages/farmers_market.json",
+            "https://kernels.ctgrassroots.org/Group%20Packages/farmers_market.json",
         )
 
         first_group: GroupEventsKernel = farmers_market.scraper_type_and_kernels[
@@ -59,11 +59,8 @@ class TestJSONParser(unittest.TestCase):
         self.assertEqual(["Farmer Market"], mobilizon_metadata["defaultTags"])
 
     def test_runner_submission_json(self):
-        google_calendars: GroupPackage = get_group_package(
-            f"https://kernels.ctgrassroots.org/Group%20Packages/misc.json",
-        )
         farmers_market: GroupPackage = get_group_package(
-            f"https://kernels.ctgrassroots.org/Group%20Packages/farmers_market.json",
+            "https://kernels.ctgrassroots.org/Group%20Packages/farmers_market.json",
         )
 
         runner_submission: RunnerSubmission = get_runner_submission(

@@ -1,3 +1,6 @@
+from typing import Union
+
+
 class GenericAddress:
     """
     Object used to store address information.
@@ -10,23 +13,23 @@ class GenericAddress:
         country: Country
     """
 
-    geom: str
-    locality: str
-    postalCode: str
-    street: str
+    geom: str | None
+    locality: str | None
+    postalCode: str | None
+    street: str | None
     country: str
-    region: str
+    region: str | None
     timezone: str
     description: str
 
     def __init__(
         self,
-        geom: str = None,
-        locality: str = None,
-        postalCode: str = None,
-        street: str = None,
+        geom: str | None = None,
+        locality: str | None = None,
+        postalCode: str | None = None,
+        street: str | None = None,
         country: str = "United States",
-        region: str = None,
+        region: str | None = None,
         timezone: str = "America/New_York",
         description="",
     ):
@@ -39,8 +42,7 @@ class GenericAddress:
         self.timezone = timezone
         self.description = description
 
-    def _precise_equal(self, other: 'GenericAddress') -> bool:
-        other: GenericAddress
+    def _precise_equal(self, other: "GenericAddress") -> bool:
         local_postal_street: bool = (
             other.locality == self.locality
             and other.postalCode == self.postalCode
@@ -51,18 +53,16 @@ class GenericAddress:
             and other.region == self.region
             and other.timezone == self.timezone
         )
-        return (country_region_timezone and local_postal_street)
+        return country_region_timezone and local_postal_street
 
-    def fuzzy_equal(self, other: 'GenericAddress'):
-        if type(other) != GenericAddress:
+    def fuzzy_equal(self, other: Union["GenericAddress", None]):
+        if not isinstance(other, GenericAddress):
             return False
         precise = self._precise_equal(other)
-        return (
-            precise and other.description == self.description
-        )
+        return precise and other.description == self.description
 
     def __eq__(self, other):
-        if type(other) != GenericAddress:
+        if not isinstance(other, GenericAddress):
             return False
         precise = self._precise_equal(other)
         return (
@@ -84,25 +84,25 @@ class GenericEvent:
     publisher_specific_info: dict
 
     title: str
-    description: str
+    description: str | None
     begins_on: str
-    ends_on: str
-    picture: str
-    online_address: str
-    phone_address: str
-    physical_address: GenericAddress
+    ends_on: str | None
+    picture: str | None
+    online_address: str | None
+    phone_address: str | None
+    physical_address: GenericAddress | None
 
     def __init__(
         self,
         publisher_specific_info: dict,
         title: str,
         begins_on: str,
-        description: str = None,
-        ends_on: str = None,
-        online_address: str = None,
-        phone_address: str = None,
-        physical_address: GenericAddress = None,
-        picture: str = None,
+        description: str | None = None,
+        ends_on: str | None = None,
+        online_address: str | None = None,
+        phone_address: str | None = None,
+        physical_address: GenericAddress | None = None,
+        picture: str | None = None,
     ):
         self.publisher_specific_info = publisher_specific_info
         self.title = title
@@ -118,28 +118,29 @@ class GenericEvent:
     def default(cls):
         return cls(None, None, None)
 
+    def fuzzy_equal(self, other: "GenericEvent") -> bool:
+        time_test = other.ends_on == self.ends_on and other.begins_on == self.begins_on
+        physical_address_test: bool = (
+            self.physical_address == other.physical_address
+            if self.physical_address is None
+            else self.physical_address.fuzzy_equal(other.physical_address)
+        )
+        address_test: bool = (
+            other.online_address == self.online_address
+            and other.phone_address == self.phone_address
+            and physical_address_test
+        )
+        title: bool = other.title.strip() == self.title.strip()
+        publisher_info: bool = (
+            other.publisher_specific_info == self.publisher_specific_info
+        )
+        return time_test and address_test and title and publisher_info
+
     def __eq__(self, other):
-        if type(other) != GenericEvent:
+        if not isinstance(other, GenericEvent):
             return False
         else:
-            other: GenericEvent
-            time_test = (
-                other.ends_on == self.ends_on
-                and other.begins_on == self.begins_on
-            )
-            address_test: bool = (
-                other.online_address == self.online_address
-                and other.phone_address == self.phone_address
-                and self.physical_address.fuzzy_equal(other.physical_address)
-            )
-            description_and_title: bool = (
-                other.title.strip() == self.title.strip() and other.description.replace('\n', '').replace(" ", "") == self.description.replace("\n", "").replace(" ", "")
-            )
-            return (
-                time_test and address_test
-                and description_and_title
-                and other.publisher_specific_info == self.publisher_specific_info
-            )
+            return self.fuzzy_equal(other) and self.description == other.description
 
     def __str__(self):
         return f"Title: {self.title}, Begins On: {self.begins_on}, Ends On: {self.ends_on}\nDescription: {self.description}\nAddress: {self.physical_address}\nPicture URL: {self.picture}"

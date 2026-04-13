@@ -25,10 +25,11 @@ class StaticScraper(Scraper):
         pass
 
     def retrieve_from_source(
-        self, group_kernel: GroupEventsKernel
-    ) -> [AllEventsFromAGroup]:
+        self, group_kernel: GroupEventsKernel | None = None
+    ) -> list[AllEventsFromAGroup]:
+        assert group_kernel is not None
         logger.info(f"Getting static events: {group_kernel.group_name}")
-        events: [GenericEvent] = hydrate_event_template_with_legitimate_times(
+        events: list[GenericEvent] = hydrate_event_template_with_legitimate_times(
             group_kernel
         )
         event: GenericEvent
@@ -39,7 +40,7 @@ class StaticScraper(Scraper):
 
 def hydrate_event_template_with_legitimate_times(
     group_kernel: GroupEventsKernel,
-) -> [GenericEvent]:
+) -> list[GenericEvent]:
     """
     Updating the initial default times from the static event to their relevant times for the week, unless
     the end date has been reached.

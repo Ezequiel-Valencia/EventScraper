@@ -1,7 +1,6 @@
 from calendar_event_engine.db.db_cache import SQLiteDB
 from calendar_event_engine.db.event_source_driver import EventSource
 from calendar_event_engine.db.uploaded_events_driver import UploadedEventRow
-import sqlite3
 import unittest
 
 from calendar_event_engine.types.submission import ScraperTypes

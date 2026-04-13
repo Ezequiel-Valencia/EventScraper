@@ -10,16 +10,14 @@ dependencies = [
     "gql==3.5.0",
     "pydantic>=2.7.0,<3",
     "tenacity>=8.2.3,<9",
-    "requests-toolbelt>=1.0.0,<2",
+    "google-auth>=2.0.0",
     "google-api-python-client>=2.127.0,<3",
-    "google-auth-httplib2>=0.2.0,<0.3",
     "google-auth-oauthlib>=1.2.0,<2",
     "geopy>=2.4.1,<3",
     "slack_sdk>=3.32.0,<4",
     "icalendar>=6.0.1,<7",
-    "aiohttp>=3.10.10,<4",
     "validators>=0.34.0,<0.35",
-    "beautifulsoup4>=4.13.4,<5",
+    "httpx>=0.28.1"
 ]
 
 [dependency-groups]
@@ -32,8 +30,24 @@ dev = [
     "pandas-stubs",
     "pytest-cov>=4.0.0",
     "pytest-asyncio>=1.0.0,<2",
-    "ruff>=0.11.5"
+    "ruff>=0.11.5",
+    "types-requests>=2.31.0",
 ]
+
+[tool.mypy]
+files = ["calendar_event_engine"]
+
+[[tool.mypy.overrides]]
+module = [
+    "geopy.*",
+    "icalendar.*",
+    "icalendar.cal",
+    "google_auth_oauthlib.*",
+    "googleapiclient.*",
+    "google.auth.*",
+    "google.oauth2.*",
+]
+ignore_missing_imports = true
 
 [build-system]
 requires = ["hatchling"]

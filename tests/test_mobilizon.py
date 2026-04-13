@@ -3,9 +3,6 @@ import unittest
 
 import pytest
 
-from calendar_event_engine.Runner import _runner
-from calendar_event_engine.db.db_cache import SQLiteDB
-from calendar_event_engine.parser.submission import get_runner_submission
 from calendar_event_engine.publishers.mobilizon.api import MobilizonAPI
 from calendar_event_engine.publishers.mobilizon.types import MobilizonEvent
 
@@ -15,7 +12,11 @@ class TestMobilizonAPI(unittest.TestCase):
 
     @pytest.mark.skipif(os.getenv("BOT_EMAIL") is None, reason="No bot specified.")
     def test_upload_n_delete_pictures(self):
-        mobilizon_api: MobilizonAPI = MobilizonAPI(self.mobilizon_endpoint, os.getenv("BOT_EMAIL"), password=os.getenv("BOT_PASSWORD"))
+        mobilizon_api: MobilizonAPI = MobilizonAPI(
+            self.mobilizon_endpoint,
+            os.getenv("BOT_EMAIL"),
+            password=os.getenv("BOT_PASSWORD"),
+        )
         upload_uuid = mobilizon_api.upload_file(
             "https://cdn.britannica.com/92/100692-050-5B69B59B/Mallard.jpg"
         )
@@ -24,7 +25,11 @@ class TestMobilizonAPI(unittest.TestCase):
 
     @pytest.mark.skipif(os.getenv("BOT_EMAIL") is None, reason="No bot specified.")
     def test_create_event(self):
-        mobilizon_api: MobilizonAPI = MobilizonAPI(self.mobilizon_endpoint, os.getenv("BOT_EMAIL"), password=os.getenv("BOT_PASSWORD"))
+        mobilizon_api: MobilizonAPI = MobilizonAPI(
+            self.mobilizon_endpoint,
+            os.getenv("BOT_EMAIL"),
+            password=os.getenv("BOT_PASSWORD"),
+        )
         event = MobilizonEvent(
             attributedToId=27,
             title="Test",

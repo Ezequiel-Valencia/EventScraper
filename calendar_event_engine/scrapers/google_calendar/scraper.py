@@ -4,7 +4,6 @@ import os
 from calendar_event_engine.db.db_cache import SQLiteDB
 from calendar_event_engine.logger import create_logger_from_designated_logger
 from calendar_event_engine.parser.package import get_group_package
-from calendar_event_engine.publishers.mobilizon.api import logger
 from calendar_event_engine.scrapers.abc_scraper import Scraper
 from calendar_event_engine.scrapers.google_calendar.api import GCalAPI
 from calendar_event_engine.types.generics import GenericEvent
@@ -50,8 +49,9 @@ class GoogleCalendarScraper(Scraper):
         return events
 
     def retrieve_from_source(
-        self, group_event_kernel: GroupEventsKernel
+        self, group_event_kernel: GroupEventsKernel | None = None
     ) -> list[AllEventsFromAGroup]:
+        assert group_event_kernel is not None
         all_events: list[AllEventsFromAGroup] = []
         logger.info(f"Getting events from calendar {group_event_kernel.group_name}")
         for google_calendar_id in group_event_kernel.calendar_ids:
@@ -68,13 +68,13 @@ class GoogleCalendarScraper(Scraper):
     # Used Mostly for Testing ##
     ############################
     def get_gcal_events_for_specific_group_and_upload_them(self, calendar_group: str):
-        google_calendars: list[GroupEventsKernel] = get_group_package(
-            f"{os.getcwd()}/src/scrapers/GCal.json"
-        )
+        google_calendars = get_group_package(f"{os.getcwd()}/src/scrapers/GCal.json")
         logger.info(f"\nGetting events from calendar {calendar_group}")
         gCal: GroupEventsKernel
         all_events: list[GenericEvent] = []
-        for gCal in google_calendars:
+        for gCal in google_calendars.scraper_type_and_kernels.get(
+            ScraperTypes.GOOGLE_CAL, []
+        ):
             if gCal.group_name == calendar_group:
                 for googleCalendarID in gCal.calendar_ids:
                     all_events += self._get_specific_calendar_events(

@@ -81,9 +81,10 @@ class UploadedEventsDriver:
 
         db_cursor.execute(
             f"INSERT INTO {self.uploaded_events_table_name} (uuid, user_id, title, date, group_id, group_name)"
-            + f"VALUES (?, ?, ?, ? , ?, ?)",
+            + "VALUES (?, ?, ?, ? , ?, ?)",
             insert_row,
         )
         primary_key = db_cursor.lastrowid
+        assert primary_key is not None
         db_connection.commit()
         return primary_key

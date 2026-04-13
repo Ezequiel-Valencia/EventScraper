@@ -26,18 +26,17 @@ logger = create_logger_from_designated_logger(__name__)
 
 def _runner(
     runner_submission: RunnerSubmission,
-    custom_scrapers: dict[Publisher, list[CustomScraperJob]] = None,
+    custom_scrapers: dict[Publisher, list[CustomScraperJob]] | None = None,
 ):
     continue_scraping = True
     num_retries = 0
     theres_an_expired_token = False
     while continue_scraping and num_retries < 5:
         try:
-            submitted_publishers: {Publisher: list[GroupPackage]} = (
+            submitted_publishers: dict[Publisher, list[GroupPackage]] = (
                 runner_submission.publishers
             )
             for publisher in submitted_publishers.keys():
-                publisher: Publisher
                 publisher.connect()
                 group_package: GroupPackage
                 for group_package in submitted_publishers[publisher]:
@@ -53,7 +52,6 @@ def _runner(
                                 group_package.scraper_type_and_kernels[scraper_type]
                             )
                             for event_kernel in group_event_kernels:
-                                event_kernel: GroupEventsKernel
                                 events: list[AllEventsFromAGroup] | None = None
                                 try:
                                     events = scraper.retrieve_from_source(event_kernel)
@@ -105,7 +103,8 @@ def _runner(
             if err.code == 500 and err.reason.lower() == "Too many requests".lower():
                 num_retries += 1
                 logger.warning(
-                    "Going to sleep then retrying to scrape. Retry Num: " + num_retries
+                    "Going to sleep then retrying to scrape. Retry Num: "
+                    + str(num_retries)
                 )
                 time.sleep(120)
     if theres_an_expired_token:
@@ -141,8 +140,8 @@ def _produce_slack_message(color, title, text, priority):
 def start_event_engine(
     remote_json_url: str,
     cache_db: SQLiteDB,
-    slack_webhook: WebhookClient = None,
-    custom_scrapers: dict[Publisher, list[CustomScraperJob]] = None,
+    slack_webhook: WebhookClient | None = None,
+    custom_scrapers: dict[Publisher, list[CustomScraperJob]] | None = None,
     test_mode: bool = False,
 ):
     logger.info("Scraper Started")
@@ -168,7 +167,7 @@ def start_event_engine(
             time_to_sleep = _days_to_sleep(2)
             logger.info("Sleeping " + str(sleeping) + " Days Until Next Scrape")
             if slack_webhook is not None:
-                response = slack_webhook.send(
+                slack_webhook.send(
                     attachments=[
                         _produce_slack_message(
                             "#e6e209", "Expired Token", "Replace token.json", "Medium"
@@ -199,10 +198,9 @@ def start_event_engine(
 
 
 if __name__ == "__main__":
+    slack_webhook_url = os.environ.get("SLACK_WEBHOOK")
     env_webhook = (
-        None
-        if os.environ.get("SLACK_WEBHOOK") is None
-        else WebhookClient(os.environ.get("SLACK_WEBHOOK"))
+        None if slack_webhook_url is None else WebhookClient(slack_webhook_url)
     )
     env_test_mode = False if "TEST_MODE" not in os.environ else True
     submission_json_path = os.getenv("RUNNER_SUBMISSION_JSON_PATH")
