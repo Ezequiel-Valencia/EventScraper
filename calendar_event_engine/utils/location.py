@@ -7,14 +7,6 @@ from calendar_event_engine.types.generics import GenericAddress
 logger = create_logger_from_designated_logger(__name__)
 
 
-def _generate_args(local_variables: dict) -> dict:
-    args = {}
-    for name, value in local_variables.items():
-        if value is not None and name != "self" and name != "__class__":
-            args[name] = value
-    return args
-
-
 def find_geolocation_from_address(
     address: GenericAddress | None,
     default_location: GenericAddress | None,

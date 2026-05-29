@@ -70,7 +70,7 @@ class _MobilizonClient:
 
     # attempts at 0s, 2s, 4s, 8s
     @retry(
-        reraise=True, stop=stop_after_attempt(1), wait=wait_exponential(multiplier=2)
+        reraise=True, stop=stop_after_attempt(4), wait=wait_exponential(multiplier=2)
     )
     def publish(self, query):
         response = self.client.execute(query)

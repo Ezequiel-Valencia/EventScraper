@@ -94,7 +94,7 @@ class MobilizonUploader(Publisher):
             email = os.environ.get("MOBILIZON_EMAIL")
             passwd = os.environ.get("MOBILIZON_PASSWORD")
 
-            if email is None and passwd is None:
+            if email is None or passwd is None:
                 login_file_path = os.environ.get("MOBILIZON_LOGIN_FILE")
                 with open(login_file_path, "r") as f:
                     secrets = json.load(f)

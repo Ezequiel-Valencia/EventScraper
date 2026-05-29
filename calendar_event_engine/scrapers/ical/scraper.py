@@ -26,7 +26,7 @@ class ICALScraper(Scraper):
         pass
 
     def get_source_type(self):
-        return ScraperTypes.GOOGLE_CAL
+        return ScraperTypes.ICAL
 
     cache_db: SQLiteDB
 
