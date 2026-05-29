@@ -49,6 +49,11 @@ module = [
 ]
 ignore_missing_imports = true
 
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests that hit live external services (deselect with --mock-only)",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
