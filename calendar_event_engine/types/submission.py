@@ -99,7 +99,7 @@ class AllEventsFromAGroup:
     """
 
     events: list[GenericEvent] | None = None
-    eventKernel: GroupEventsKernel | None = None
+    event_kernel: GroupEventsKernel | None = None
     calendar_id: str = ""
 
     def __init__(
@@ -109,5 +109,5 @@ class AllEventsFromAGroup:
         source_id: str,
     ):
         self.events = events
-        self.eventKernel = event_kernel
+        self.event_kernel = event_kernel
         self.calendar_id = source_id

@@ -31,7 +31,7 @@ class Publisher(ABC):
         events_uploaded = []
         for events_to_upload in list_of_groups_event:
             all_events = events_to_upload.events
-            event_kernel = events_to_upload.eventKernel
+            event_kernel = events_to_upload.event_kernel
             source_id = events_to_upload.calendar_id
             if all_events is None:
                 continue

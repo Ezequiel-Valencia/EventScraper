@@ -6,8 +6,8 @@ class UploadedEventRow:
     user_id: str
     title: str
     date: str
-    groupID: int
-    groupName: str
+    group_id: int
+    group_name: str
 
     def __init__(
         self,
@@ -33,8 +33,8 @@ class UploadedEventRow:
         self.user_id = user_id
         self.title = title
         self.date = date
-        self.groupID = group_id
-        self.groupName = group_name
+        self.group_id = group_id
+        self.group_name = group_name
 
 
 class UploadedEventsDriver:
@@ -75,8 +75,8 @@ class UploadedEventsDriver:
             row_to_add.user_id,
             row_to_add.title,
             row_to_add.date,
-            row_to_add.groupID,
-            row_to_add.groupName,
+            row_to_add.group_id,
+            row_to_add.group_name,
         )
 
         db_cursor.execute(

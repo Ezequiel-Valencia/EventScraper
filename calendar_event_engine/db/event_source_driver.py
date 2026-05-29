@@ -3,9 +3,9 @@ import sqlite3
 
 class EventSource:
     uuid: str
-    websiteURL: str
+    website_url: str
     calendar_id: str
-    sourceType: str
+    source_type: str
 
     def __init__(self, uuid: str, website_url: str, calendar_id: str, source_type: str):
         """
@@ -16,9 +16,9 @@ class EventSource:
             source_type(str): Source type
         """
         self.uuid = uuid
-        self.websiteURL = website_url
+        self.website_url = website_url
         self.calendar_id = calendar_id
-        self.sourceType = source_type
+        self.source_type = source_type
 
 
 class EventSourceDriver:
@@ -48,9 +48,9 @@ class EventSourceDriver:
         event_source_row = (
             foreign_key,
             event_source.uuid,
-            event_source.websiteURL,
+            event_source.website_url,
             event_source.calendar_id,
-            event_source.sourceType,
+            event_source.source_type,
         )
 
         db_cursor.execute(
