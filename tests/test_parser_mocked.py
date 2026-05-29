@@ -26,9 +26,7 @@ def _mock_response(status_code: int = 200, text: str = "{}") -> MagicMock:
     except json.JSONDecodeError as e:
         mock.json.side_effect = e
     if status_code >= 400:
-        mock.raise_for_status.side_effect = requests.exceptions.HTTPError(
-            response=mock
-        )
+        mock.raise_for_status.side_effect = requests.exceptions.HTTPError(response=mock)
     else:
         mock.raise_for_status.return_value = None
     return mock
@@ -38,7 +36,9 @@ class TestGetGroupPackageMocked(unittest.TestCase):
     def test_successful_parse(self):
         fixture = _load_fixture("test_group_package.json")
         with patch("requests.get", return_value=_mock_response(text=fixture)):
-            package = get_group_package("https://fixtures.local/test_group_package.json")
+            package = get_group_package(
+                "https://fixtures.local/test_group_package.json"
+            )
 
         self.assertIn(ScraperTypes.GOOGLE_CAL, package.scraper_type_and_kernels)
         kernels = package.scraper_type_and_kernels[ScraperTypes.GOOGLE_CAL]
@@ -110,19 +110,27 @@ class TestGetRunnerSubmissionMocked(unittest.TestCase):
             side_effect=requests.exceptions.ConnectionError("Connection refused"),
         ):
             with self.assertRaises(RuntimeError) as ctx:
-                get_runner_submission("https://unreachable.local/submission.json", True, None)
+                get_runner_submission(
+                    "https://unreachable.local/submission.json", True, None
+                )
         self.assertIn("Failed to fetch runner submission", str(ctx.exception))
 
     def test_http_error_raises_runtime_error(self):
         with patch("requests.get", return_value=_mock_response(status_code=500)):
             with self.assertRaises(RuntimeError) as ctx:
-                get_runner_submission("https://fixtures.local/submission.json", True, None)
+                get_runner_submission(
+                    "https://fixtures.local/submission.json", True, None
+                )
         self.assertIn("Failed to fetch runner submission", str(ctx.exception))
 
     def test_invalid_json_raises_runtime_error(self):
-        with patch("requests.get", return_value=_mock_response(text="not valid json{{")):
+        with patch(
+            "requests.get", return_value=_mock_response(text="not valid json{{")
+        ):
             with self.assertRaises(RuntimeError) as ctx:
-                get_runner_submission("https://fixtures.local/submission.json", True, None)
+                get_runner_submission(
+                    "https://fixtures.local/submission.json", True, None
+                )
         self.assertIn("Invalid JSON", str(ctx.exception))
 
 
