@@ -37,6 +37,9 @@ dev = [
 [tool.mypy]
 files = ["calendar_event_engine"]
 
+[tool.setuptools.package-data]
+"your_library" = ["py.typed"]
+
 [[tool.mypy.overrides]]
 module = [
     "geopy.*",
