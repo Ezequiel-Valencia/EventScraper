@@ -3,14 +3,6 @@ from enum import Enum
 from pydantic import BaseModel
 
 
-def _generate_args(localVariables: dict) -> dict:
-    args = {}
-    for name, value in localVariables.items():
-        if value is not None and name != "self" and name != "__class__":
-            args[name] = value
-    return args
-
-
 class EventParameters:
     class Status(Enum):
         confirmed = "CONFIRMED"
@@ -26,8 +18,8 @@ class EventParameters:
         restricted = "RESTRICTED"
 
     class Categories(Enum):
-        arts = "ARTS".upper()
-        book_clubs = "BOOK_CLUBS".upper()
+        arts = "ARTS"
+        book_clubs = "BOOK_CLUBS"
         business = "BUSINESS"
         causes = "CAUSES"
         comedy = "COMEDY"
@@ -57,10 +49,10 @@ class EventParameters:
         default = "MEETING"
 
     class Address(BaseModel):
-        """Address object that Mobilizon can utilize
+        """Address object matching Mobilizon's AddressInput.
 
         Args:
-            geom: Geo-coordinates for the point where the address is
+            geom: Geo-coordinates for the point where the address is ("lon;lat")
             region: The state of this address
             locality: Town
             postalCode: ZipCode
@@ -69,86 +61,47 @@ class EventParameters:
             originId: The ID affiliated with the api that gave the location info
         """
 
+        locality: str
+        postalCode: str = ""
+        street: str = ""
+        country: str = "United States"
+        region: str = "Connecticut"
         geom: str | None = None
-        locality: str  # Town
-        postalCode: str  # ZipCode
-        street: str  # Street
-        country: str  #
-        type: str | None = None
-        region: str = ""
         timezone: str = "America/New_York"
         description: str = ""
         originId: str | None = None
 
-        def __init__(
-            self,
-            locality: str,
-            postalCode: str = "",
-            street: str = "",
-            country: str = "United States",
-            type: str | None = None,
-            originId: str | None = None,
-            region: str = "Connecticut",
-            geom: str | None = None,
-            timezone: str = "America/New_York",
-            description: str = "",
-        ):
-            args = _generate_args(locals())
-            super().__init__(**args)
-
     class MediaInput(BaseModel):
-        mediaUuid: str | None = None
-
-        def __init__(self, mediaUuid: str):
-            args = _generate_args(locals())
-            super().__init__(**args)
+        # https://github.com/framasoft/mobilizon/blob/main/lib/graphql/schema/media.ex
+        mediaUuid: str
 
 
 class MobilizonEvent(BaseModel):
-    """_summary_
+    """Arguments of Mobilizon's createEvent mutation.
 
     Args:
-        OrganizerActorId: Actor ID
-        AttributedToId: Group ID
-        Dates: UTC format, that is YYYY-MM-DD HH:MM:SSZ with T in the middle if wanted
+        organizerActorId: Actor ID
+        attributedToId: Group ID
+        beginsOn/endsOn: ISO 8601 datetimes, e.g. 2025-05-25T00:00:00-04:00
     """
 
-    organizerActorId: int = 0  # Actor ID
-    attributedToId: int = 0  # Group ID
-    title: str = ""
-    description: str | None = None
-    beginsOn: str = "2020-10-29T00:00:00+01:00"
+    organizerActorId: int = 0
+    attributedToId: int
+    title: str
+    description: str = ""  # Mobilizon requires a non-null description
+    beginsOn: str
     endsOn: str | None = None
     status: EventParameters.Status = EventParameters.Status.confirmed
     visibility: EventParameters.Visibility = EventParameters.Visibility.public
     joinOptions: EventParameters.JoinOptions = EventParameters.JoinOptions.free
-    draft: str | None = None
-    tags: list[str] = []
-    picture: EventParameters.MediaInput | None = (
-        None  # https://github.com/framasoft/mobilizon/blob/main/lib/graphql/schema/media.ex
-    )
+    tags: list[str] | None = None
+    picture: EventParameters.MediaInput | None = None
     onlineAddress: str | None = None
-    phoneAddress: str | None = None
     category: EventParameters.Categories | None = None
     physicalAddress: EventParameters.Address | None = None
-    # options: dict = {}
-    contacts: str | None = None
 
-    def __init__(
-        self,
-        attributedToId: int,
-        title: str,
-        description: str | None,
-        beginsOn: str,
-        onlineAddress: str | None = None,
-        endsOn: str | None = None,
-        physicalAddress: EventParameters.Address | None = None,
-        category: EventParameters.Categories | None = None,
-        tags: list[str] | None = None,
-        picture: EventParameters.MediaInput | None = None,
-    ):
-        args = _generate_args(locals())
-        super().__init__(**args)
+    def to_gql_variables(self) -> dict:
+        return self.model_dump(mode="json", exclude_none=True)
 
 
 class Actor(BaseModel):
@@ -157,10 +110,3 @@ class Actor(BaseModel):
     preferredUsername: str
     type: str
     url: str
-
-    def __init__(self, id: int, name: str, preferredUsername: str, type: str, url: str):
-        args = _generate_args(locals())
-        super().__init__(**args)
-
-
-# print(isinstance(EventParameters.MediaInput(), (BaseModel)))

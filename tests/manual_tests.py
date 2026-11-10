@@ -54,11 +54,17 @@ def manual_test_creation():
 
 def manual_test_file_upload():
     mobilizon_api = MobilizonAPI(endpoint, email, passwd)
-    event = MobilizonEvent(25, "Test", "Description", "2025-05-27T00:00:00-04:00")
+    event = MobilizonEvent(
+        attributedToId=25,
+        title="Test",
+        description="Description",
+        beginsOn="2025-05-27T00:00:00-04:00",
+    )
     result = mobilizon_api.upload_file(
         "https://cdn.britannica.com/92/100692-050-5B69B59B/Mallard.jpg"
     )
-    event.picture = EventParameters.MediaInput(result)
+    if result is not None:
+        event.picture = EventParameters.MediaInput(mediaUuid=result)
     mobilizon_api.create_event(event)
 
 

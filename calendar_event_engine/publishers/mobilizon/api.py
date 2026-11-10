@@ -1,154 +1,140 @@
 import json
 
-import requests
+import httpx
 from gql import Client
+from gql.transport.exceptions import (
+    TransportProtocolError,
+    TransportQueryError,
+    TransportServerError,
+)
 from gql.transport.httpx import HTTPXTransport
-from tenacity import retry, retry_if_exception, stop_after_attempt, wait_exponential
+from graphql import DocumentNode
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 from calendar_event_engine.logger import create_logger_from_designated_logger
-from calendar_event_engine.publishers.mobilizon.gql_requests import (
-    EventGQL,
-    AuthenticationGQL,
-    ActorsGQL,
-)
+from calendar_event_engine.publishers.mobilizon import gql_requests as gqlr
 from calendar_event_engine.publishers.mobilizon.types import MobilizonEvent, Actor
 
 logger = create_logger_from_designated_logger(__name__)
 
+TIMEOUT_SECONDS = 30
 
-class retry_if_not_exception_type(retry_if_exception):
-    """Retries except an exception has been raised of one or more types."""
+# Only retry failures that may be transient (network errors, 5xx, garbled
+# responses). GraphQL errors such as validation or permission problems will
+# fail the same way every time, so they are raised immediately.
+_retry_transient = retry(
+    reraise=True,
+    retry=retry_if_exception_type(
+        (httpx.TransportError, TransportServerError, TransportProtocolError)
+    ),
+    stop=stop_after_attempt(4),
+    wait=wait_exponential(multiplier=2),  # waits 2s, 4s, 8s
+)
 
-    def __init__(self, exception_types=Exception):
-        self.exception_types = exception_types
-        super(retry_if_not_exception_type, self).__init__(
-            lambda e: not isinstance(e, exception_types)
-        )
 
-
-class _MobilizonClient:
-    class LoginTokens:
-        accessToken: str
-        refreshToken: str
-
-        def __init__(self, access_token: str, refresh_token: str):
-            self.accessToken = access_token
-            self.refreshToken = refresh_token
-
-    loginTokens: LoginTokens
-    client: Client
-    endpoint: str
-    headers: dict
-
-    def __init__(self, endpoint: str, email: str, password: str):
-        self.endpoint = endpoint
-        self.client = self._build_client()
-        data = self.publish(AuthenticationGQL.loginGQL(email, password))
-        login = data["login"]
-        self.loginTokens = self.LoginTokens(login["accessToken"], login["refreshToken"])
-        self.client = self._build_client(self.loginTokens.accessToken)
-
-    def _build_client(self, bearer=None):
-        self.headers = dict()
-        if bearer is not None:
-            self.headers["Authorization"] = "Bearer " + bearer
-
-        transport = HTTPXTransport(
-            url=self.endpoint,
-            headers=self.headers,
-            verify=True,
-        )
-        return Client(transport=transport, fetch_schema_from_transport=True)
-
-    def refresh_token(self, refresh_token: str):
-        return self.publish(AuthenticationGQL.refreshTokenGQL(refresh_token))
-
-    def log_out(self):
-        return self.publish(
-            AuthenticationGQL.logoutGQL(f'"{self.loginTokens.refreshToken}"')
-        )  # void
-
-    # attempts at 0s, 2s, 4s, 8s
-    @retry(
-        reraise=True, stop=stop_after_attempt(4), wait=wait_exponential(multiplier=2)
-    )
-    def publish(self, query):
-        response = self.client.execute(query)
-        return response
+def _is_unauthenticated(error: TransportQueryError) -> bool:
+    message = str(error).lower()
+    return "unauthenticated" in message or "logged in" in message
 
 
 class MobilizonAPI:
     def __init__(self, endpoint: str, email: str, password: str):
-        self._mobilizon_client: _MobilizonClient = _MobilizonClient(
-            endpoint, f'"{email}"', f'"{password}"'
+        self.endpoint = endpoint
+        self._credentials = {"email": email, "password": password}
+        self._headers: dict[str, str] = {}
+        # The transport reads this dict on every request, so updating it after
+        # (re)login is enough to authenticate subsequent calls.
+        self._client = Client(
+            transport=HTTPXTransport(
+                url=endpoint, headers=self._headers, timeout=TIMEOUT_SECONDS
+            ),
+            fetch_schema_from_transport=True,
         )
-        self.bot_actor: Actor = Actor(**self.get_actors()["identities"][0])
-        self.bearer_token: str = (
-            f"Bearer {self._mobilizon_client.loginTokens.accessToken}"
-        )
+        self._login()
+        self.bot_actor = Actor(**self.get_actors()["identities"][0])
         logger.info("Logged In Mobilizon")
 
-    def create_event(self, event_type: MobilizonEvent) -> dict:
-        event_type.organizerActorId = self.bot_actor.id
+    def _login(self) -> None:
+        self._headers.pop("Authorization", None)
+        login = self._execute(gqlr.LOGIN, self._credentials, relogin=False)["login"]
+        self._refresh_token: str = login["refreshToken"]
+        self._headers["Authorization"] = f"Bearer {login['accessToken']}"
 
-        event_id = self._mobilizon_client.publish(EventGQL.createEventGQL(event_type))
-        return {
-            "id": event_id["createEvent"]["id"],
-            "uuid": event_id["createEvent"]["uuid"],
-        }
+    @_retry_transient
+    def _execute_once(self, document: DocumentNode, variables: dict | None) -> dict:
+        return self._client.execute(document, variable_values=variables)
+
+    def _execute(
+        self, document: DocumentNode, variables: dict | None = None, relogin=True
+    ) -> dict:
+        try:
+            return self._execute_once(document, variables)
+        except TransportQueryError as e:
+            # Access tokens are short-lived; log back in once and try again.
+            if not relogin or not _is_unauthenticated(e):
+                raise
+            logger.info("Mobilizon session expired, logging in again")
+            self._login()
+            return self._execute_once(document, variables)
+
+    def create_event(self, event: MobilizonEvent) -> dict:
+        event.organizerActorId = self.bot_actor.id
+        variables = event.to_gql_variables()
+        created = self._execute(gqlr.create_event(variables), variables)["createEvent"]
+        return {"id": created["id"], "uuid": created["uuid"]}
 
     def delete_event(self, event_id: str) -> str:
-        response = requests.post(
-            self._mobilizon_client.endpoint,
-            data={
-                "query": EventGQL.delete_event_gql(),
-                "variables": json.dumps({"eventId": event_id}),
-            },
-            headers={"Authorization": self.bearer_token},
-        )
-        return json.loads(response.content)["data"]["deleteEvent"]["id"]
+        return self._execute(gqlr.DELETE_EVENT, {"eventId": event_id})["deleteEvent"][
+            "id"
+        ]
 
-    def upload_file(self, file_path: str) -> str:
-        with requests.get(file_path) as file:
+    def upload_file(self, file_url: str) -> str | None:
+        """Download the file at `file_url` and upload it to Mobilizon.
+
+        :return: The uploaded media's UUID, or None if it could not be uploaded.
+        """
+        try:
+            return self._upload_file(file_url)
+        except Exception as e:
+            logger.warning(f"Unable to upload picture {file_url}: {e}")
+            return None
+
+    @_retry_transient
+    def _upload_file(self, file_url: str) -> str:
+        with httpx.Client(timeout=TIMEOUT_SECONDS, follow_redirects=True) as http:
+            file = http.get(file_url)
+            file.raise_for_status()
             variables = {
                 "name": "automatically-uploaded-event-bot",
                 "file": "uploaded-file",
-                "actorID": self.bot_actor.id,
+                "actorId": self.bot_actor.id,
             }
-            response = requests.post(
-                self._mobilizon_client.endpoint,
-                data={
-                    "query": EventGQL.uploadMediaRawGQL(),
-                    "variables": json.dumps(variables),
-                },
+            response = http.post(
+                self.endpoint,
+                data={"query": gqlr.UPLOAD_MEDIA, "variables": json.dumps(variables)},
                 files={"uploaded-file": file.content},
-                headers={
-                    "Authorization": self.bearer_token,
-                    "accept": "application/json",
-                },
+                headers={**self._headers, "accept": "application/json"},
             )
-            content = json.loads(response.content)
-            if content is None or response.status_code != 200 or "errors" in content:
-                return ""
+            response.raise_for_status()
+            content = response.json()
+            if content.get("errors"):
+                raise TransportQueryError(str(content["errors"]))
             return content["data"]["uploadMedia"]["uuid"]
 
     def delete_uploaded_file(self, uuid: str) -> str:
-        response = requests.post(
-            self._mobilizon_client.endpoint,
-            data={
-                "query": EventGQL.deleteMediaRawGQL(),
-                "variables": json.dumps({"uuid": uuid}),
-            },
-            headers={"Authorization": self.bearer_token, "accept": "application/json"},
-        )
-        return json.loads(response.content)["data"]["removeMedia"]["uuid"]
+        return self._execute(gqlr.REMOVE_MEDIA, {"uuid": uuid})["removeMedia"]["uuid"]
 
     def logout(self):
-        self._mobilizon_client.log_out()
+        self._execute(gqlr.LOGOUT, {"refreshToken": self._refresh_token})
         logger.info("Logged Out")
 
-    def get_actors(self):
-        return self._mobilizon_client.publish(ActorsGQL.getIdentities())
+    def get_actors(self) -> dict:
+        return self._execute(gqlr.IDENTITIES)
 
-    def get_groups(self):
-        return self._mobilizon_client.publish(ActorsGQL.getGroups('"eventbot"'))
+    def get_groups(self, name: str = "eventbot", page: int = 1, limit: int = 30):
+        return self._execute(gqlr.GROUPS, {"name": name, "page": page, "limit": limit})
