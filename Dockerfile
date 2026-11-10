@@ -11,13 +11,14 @@ ENV CACHE_DB_PATH=/app/config
 RUN apt-get update
 RUN apt-get -y install software-properties-common
 RUN add-apt-repository ppa:deadsnakes/ppa && apt-get update
-RUN apt-get -y install python3 && apt-get -y install python3-pip && apt-get -y install python3-poetry
+RUN apt-get -y install python3
+COPY --from=ghcr.io/astral-sh/uv:0.12.21 /uv /usr/local/bin/uv
 
 ##################
 ## Add Src Code ##
 ##################
 ADD calendar_event_engine /app/calendar_event_engine
-COPY pyproject.toml /app
+COPY pyproject.toml uv.lock /app/
 COPY README.md /app
 
 
@@ -38,7 +39,7 @@ RUN chmod u=rx,g=rx,o=rx /app/calendar_event_engine
 
 USER eventscraper
 WORKDIR /app
-RUN poetry install
+RUN uv sync --frozen --no-dev
 
 RUN mkdir /app/config
 VOLUME /app/config

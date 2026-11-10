@@ -13,7 +13,7 @@ fi
 chown -R eventscraper:eventg /app
 
 if [ "$(id -u)" -eq 0 ]; then
-  gosu eventscraper:eventg poetry run python /app/calendar_event_engine/Runner.py
+  gosu eventscraper:eventg /app/.venv/bin/python /app/calendar_event_engine/Runner.py
 else
-  poetry run python /app/calendar_event_engine/Runner.py
+  /app/.venv/bin/python /app/calendar_event_engine/Runner.py
 fi
