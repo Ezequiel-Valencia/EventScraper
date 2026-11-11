@@ -27,12 +27,13 @@ class TestICALScraper(unittest.TestCase):
             }
         }
         address = GenericAddress(
-            geom="-72.6796498;41.7677107",
-            locality=" Hartford",
-            postalCode=" 06103",
-            street=" 350 Asylum St.",
+            latitude=41.7677107,
+            longitude=-72.6796498,
+            locality="Hartford",
+            postalCode="06103",
+            street="350 Asylum St.",
             country="United States",
-            region=" CT",
+            region="CT",
             timezone="America/New_York",
             description="",
         )

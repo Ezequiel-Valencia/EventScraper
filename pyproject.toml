@@ -1,12 +1,13 @@
 [project]
 name = "calendar_event_engine"
-version = "0.1.4"
+version = "0.2.0"
 description = ""
 authors = [{ name = "Ezequiel Valencia" }]
 requires-python = ">=3.11,<4"
 readme = "README.md"
 dependencies = [
     "gql==4.4.0",
+    "graphql-core>=3.3.2,<4",
     "pydantic>=2.14.3,<3",
     "tenacity>=9.2.1,<10",
     "google-auth[requests]>=2.62.2",
@@ -44,6 +45,10 @@ module = [
     "google.oauth2.*",
 ]
 ignore_missing_imports = true
+
+[tool.deptry.per_rule_ignores]
+# conftest.py is test-only, so pytest is correctly a dev dependency.
+DEP004 = ["pytest"]
 
 [tool.pytest.ini_options]
 markers = [

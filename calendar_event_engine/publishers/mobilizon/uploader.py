@@ -12,6 +12,7 @@ from calendar_event_engine.publishers.mobilizon.api import MobilizonAPI
 from calendar_event_engine.publishers.mobilizon.types import (
     MobilizonEvent,
     EventParameters,
+    to_mobilizon_geom,
 )
 from calendar_event_engine.types.generics import GenericEvent
 from calendar_event_engine.types.submission import GroupEventsKernel
@@ -132,7 +133,7 @@ class MobilizonUploader(Publisher):
                     locality=address.locality or "",
                     postalCode=address.postalCode or "",
                     street=address.street or "",
-                    geom=address.geom,
+                    geom=to_mobilizon_geom(address.latitude, address.longitude),
                     country=address.country,
                     region=address.region or "",
                     timezone=address.timezone,

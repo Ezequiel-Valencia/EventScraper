@@ -140,7 +140,7 @@ def _parse_retrieved_location(
     if location is None:
         logger.debug("No location provided, using default")
         return default_location
-    tokens = location.split(",")
+    tokens = [token.strip() for token in location.split(",")]
     address: GenericAddress
     match len(tokens):
         case 1:

@@ -12,7 +12,7 @@ logger = create_logger_from_designated_logger(__name__)
 @lru_cache(maxsize=1024)
 def _geocode(query: str) -> tuple[float, float] | None:
     """
-    Look up (longitude, latitude) for a query. Results, including "not found", are
+    Look up (latitude, longitude) for a query. Results, including "not found", are
     cached so the same venue is only sent to Nominatim once per process, as its
     usage policy asks. Errors propagate and are not cached, so a later call retries.
     """
@@ -20,7 +20,7 @@ def _geocode(query: str) -> tuple[float, float] | None:
     location = geo_locator.geocode(query)
     if location is None:
         return None
-    return location.longitude, location.latitude
+    return location.latitude, location.longitude
 
 
 def find_geolocation_from_address(
@@ -60,8 +60,7 @@ def find_geolocation_from_address(
 
     if coordinates is None:
         return default_location, default_location_notif
-    longitude, latitude = coordinates
-    address.geom = f"{longitude};{latitude}"
+    address.latitude, address.longitude = coordinates
     logger.debug(
         f"{event_title}: Outsourced location was {address.street}, {address.locality}"
     )

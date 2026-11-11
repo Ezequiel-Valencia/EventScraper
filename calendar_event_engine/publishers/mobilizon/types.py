@@ -3,6 +3,16 @@ from enum import Enum
 from pydantic import BaseModel
 
 
+def to_mobilizon_geom(latitude: float | None, longitude: float | None) -> str | None:
+    """
+    Mobilizon's AddressInput.geom is a "longitude;latitude" string, the reverse of
+    the usual order. Keep that quirk here, at the edge where events are published.
+    """
+    if latitude is None or longitude is None:
+        return None
+    return f"{longitude};{latitude}"
+
+
 class EventParameters:
     class Status(Enum):
         confirmed = "CONFIRMED"
@@ -52,7 +62,8 @@ class EventParameters:
         """Address object matching Mobilizon's AddressInput.
 
         Args:
-            geom: Geo-coordinates for the point where the address is ("lon;lat")
+            geom: Geo-coordinates in Mobilizon's "longitude;latitude" order.
+                Build it with `to_mobilizon_geom` rather than by hand.
             region: The state of this address
             locality: Town
             postalCode: ZipCode

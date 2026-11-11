@@ -1,0 +1,86 @@
+{
+    "name": "Test Static Package",
+    "groupKernels": {
+        "Stonington": {
+            "title": "Stonington Farmers Market",
+            "calendarIDs": ["Stonington Farmers Market"],
+            "calendarType": "STATIC",
+            "publisherInfo": {
+                "mobilizon": {
+                    "groupID": 25,
+                    "defaultImageID": "96",
+                    "defaultTags": ["Farmer Market"],
+                    "defaultCategory": "food_drink"
+                }
+            },
+            "defaultLocation": {
+                "latitude": 41.3420500959362,
+                "longitude": -71.90182249966294,
+                "locality": "Stonington",
+                "postalCode": "06378",
+                "street": "22 Bayview Ave",
+                "country": "United States",
+                "timezone": "America/New_York",
+                "region": "Connecticut",
+                "description": "The Velvet Mill"
+            },
+            "onlineAddress": "https://www.sviastonington.org/farmers-market",
+            "defaultDescription": "The Stonington Farmers Market began in 1997 under the initiative of Geoffrey Little. The enormously popular market attracts residents from the Borough and surrounding communities who come to buy fresh, healthy, local food. In 2008, the Stonington Farmers Market became a year-round event on Saturdays, moving inside during the winter months.\n\n \n\nItems sold at the market include locally grown vegetables and fruits, jams, a variety of breads, pies and baked goods, cheese, eggs, poultry, meat, seafood, Italian ices, maple syrup, honey, and flowers. Thanks to greenhouses, our farmers are able to offer a selection of fresh produce throughout the winter. Our market offers whatever our farmers are harvesting each week as well as prepared foods such as salsa, soups, meat pies, hummus, breakfast sandwiches, and baked goods.\n\n\nIn addition to great food, different craft vendors are featured each week at the market. Among the hand-made items you will find are beautiful candles, pottery, jewelry, wooden bowls, cutting boards, soaps, gorgeous note cards, and table linens.",
+            "defaultTimes": [["2024-06-15T09:00:00-04:00", "2024-06-15T12:00:00-04:00"]],
+            "startDate": "2024-05-27T00:00:00-04:00",
+            "endDate": "2040-10-12T00:00:00-04:00"
+        },
+        "Stamford": {
+            "title": "Stamford Downtown Farmers Market",
+            "calendarIDs": ["Stamford Downtown Farmers Market"],
+            "calendarType": "STATIC",
+            "publisherInfo": {
+                "mobilizon": {
+                    "groupID": 25,
+                    "defaultImageID": "98",
+                    "defaultCategory": "food_drink",
+                    "defaultTags": ["Farmer Market"]
+                }
+            },
+            "defaultLocation": {
+                "latitude": 41.05457207106413,
+                "longitude": -73.52903985602237,
+                "locality": "Stamford",
+                "postalCode": "06901",
+                "street": "130 Atlantic St",
+                "country": "United States",
+                "region": "Connecticut",
+                "timezone": "America/New_York",
+                "description": "Stamford Downtown Farmers Market"
+            },
+            "onlineAddress": "http://stamford-downtown.com/events/farmers-market/",
+            "defaultDescription": "Shop our weekly farmers market offering a wide variety of locally grown fruits, vegetables and flowers.  You'll also find breads, jams, baked goods, cheeses, oils and more!  Straight from the farm to your home! We accept WIC & SNAP.",
+            "defaultTimes": [["2024-06-15T09:00:00-04:00", "2024-06-15T14:00:00-04:00"]],
+            "startDate": "2024-06-15T00:00:00-04:00",
+            "endDate": "2040-10-26T00:00:00-04:00"
+        },
+        "Hartford Jazz Society": {
+            "calendarIDs" : ["https://calendar.google.com/calendar/ical/1323fv30pk4la63e4je86sook47avts9%40import.calendar.google.com/public/basic.ics"],
+            "calendarType": "ICAL",
+            "publisherInfo": {
+                "mobilizon": {
+                    "groupID": 17,
+                    "defaultImageID": "88",
+                    "defaultCategory": "music"
+                }
+            },
+            "defaultLocation": {
+                "latitude": 41.75953661582158,
+                "longitude": -72.70305527485634,
+                "locality": "Hartford",
+                "postalCode": "06106",
+                "street": "56 Arbor St",
+                "country": "United States",
+                "region": "Connecticut",
+                "timezone": "America/New_York",
+                "description": "Hartford Jazz Society"
+            },
+            "onlineAddress": "https://hartfordjazzsociety.com/"
+        }
+    }
+}

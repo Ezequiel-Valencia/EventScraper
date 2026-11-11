@@ -9,7 +9,8 @@ class GenericAddress:
     """
     Object used to store address information.
     Args:
-        geom: Geo-coordinates for the point where the address is ("lon;lat")
+        latitude: Latitude of the address in decimal degrees (WGS 84)
+        longitude: Longitude of the address in decimal degrees (WGS 84)
         locality: Town
         postalCode: ZipCode
         street: Street
@@ -19,7 +20,8 @@ class GenericAddress:
         description: Free text description of the place
     """
 
-    geom: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
     locality: str | None = None
     postalCode: str | None = None
     street: str | None = None
@@ -47,12 +49,16 @@ class GenericAddress:
     def __eq__(self, other):
         if not isinstance(other, GenericAddress):
             return False
-        return self.fuzzy_equal(other) and other.geom == self.geom
+        return (
+            self.fuzzy_equal(other)
+            and other.latitude == self.latitude
+            and other.longitude == self.longitude
+        )
 
     __hash__ = None  # type: ignore[assignment]  # mutable, so unhashable
 
     def __str__(self):
-        return f"{self.geom}, {self.locality}, {self.postalCode}, {self.street}, {self.region}"
+        return f"({self.latitude}, {self.longitude}), {self.locality}, {self.postalCode}, {self.street}, {self.region}"
 
 
 @dataclass(eq=False)

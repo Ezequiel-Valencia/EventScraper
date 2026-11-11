@@ -32,7 +32,8 @@ UUID, TITLE, GROUP_ID, GROUP_NAME = 1, 3, 5, 6
 
 def _address() -> GenericAddress:
     return GenericAddress(
-        geom="-72.6796498;41.7677107",
+        latitude=41.7677107,
+        longitude=-72.6796498,
         locality="Hartford",
         postalCode="06103",
         street="350 Asylum St.",
@@ -150,7 +151,8 @@ def test_runner_publishes_static_events_end_to_end(
                 "postalCode": "06378",
                 "street": "1 Main St.",
                 "region": "CT",
-                "geom": "-71.9056;41.3359",
+                "latitude": 41.3359,
+                "longitude": -71.9056,
             },
         }
 

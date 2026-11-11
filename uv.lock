@@ -97,7 +97,7 @@ wheels = [
 
 [[package]]
 name = "calendar-event-engine"
-version = "0.1.4"
+version = "0.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "geopy" },
@@ -105,6 +105,7 @@ dependencies = [
     { name = "google-auth", extra = ["requests"] },
     { name = "google-auth-oauthlib" },
     { name = "gql" },
+    { name = "graphql-core" },
     { name = "httpx2" },
     { name = "icalendar" },
     { name = "pydantic" },
@@ -131,6 +132,7 @@ requires-dist = [
     { name = "google-auth", extras = ["requests"], specifier = ">=2.62.2" },
     { name = "google-auth-oauthlib", specifier = ">=1.5.0,<2" },
     { name = "gql", specifier = "==4.4.0" },
+    { name = "graphql-core", specifier = ">=3.3.2,<4" },
     { name = "httpx2", specifier = ">=2.16.0,<3" },
     { name = "icalendar", specifier = ">=7.3.0,<8" },
     { name = "pydantic", specifier = ">=2.14.3,<3" },
