@@ -20,17 +20,30 @@ logger = create_logger_from_designated_logger(__name__)
 
 
 class MobilizonUploader(Publisher):
-    mobilizonAPI: MobilizonAPI
+    mobilizonAPI: MobilizonAPI | None
     cache_db: SQLiteDB
-    __fakeUUIDForTests = 0
 
-    def __init__(self, test_mode, cache_db):
+    def __init__(self, test_mode: bool, cache_db: SQLiteDB):
         super().__init__(cache_db, logger)
         self.testMode = test_mode
+        self.mobilizonAPI = None
+        self._fake_uuid_for_tests = 0
 
     def close(self):
-        if not self.testMode:
+        if self.mobilizonAPI is None:
+            return
+        try:
             self.mobilizonAPI.logout()
+        except Exception as err:
+            # The access token expires on its own; nothing else to clean up.
+            logger.warning("Unable to log out of Mobilizon", exc_info=err)
+        finally:
+            self.mobilizonAPI = None
+
+    def _api(self) -> MobilizonAPI:
+        if self.mobilizonAPI is None:
+            raise RuntimeError("MobilizonUploader.connect() must be called first")
+        return self.mobilizonAPI
 
     def update(self) -> None:
         pass
@@ -41,19 +54,19 @@ class MobilizonUploader(Publisher):
     def upload_individual_event(self, event_to_upload: GenericEvent) -> dict:
         event: MobilizonEvent = self.generic_event_converter(event_to_upload)
         if self.testMode:
-            self.__fakeUUIDForTests += 1
+            self._fake_uuid_for_tests += 1
             return {
                 "id": 1,
-                "uuid": self.__fakeUUIDForTests,
+                "uuid": self._fake_uuid_for_tests,
                 "groupId": event.attributedToId,
             }
         picture_url = event_to_upload.picture
         if picture_url is not None and validators.url(picture_url):
             # On failure the event keeps its default picture (if any).
-            media_uuid = self.mobilizonAPI.upload_file(picture_url)
+            media_uuid = self._api().upload_file(picture_url)
             if media_uuid is not None:
                 event.picture = EventParameters.MediaInput(mediaUuid=media_uuid)
-        upload_response = self.mobilizonAPI.create_event(event)
+        upload_response = self._api().create_event(event)
         upload_response["groupId"] = event.attributedToId
         return upload_response
 

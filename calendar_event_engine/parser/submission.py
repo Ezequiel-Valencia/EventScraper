@@ -1,6 +1,6 @@
 import json
 
-import requests
+import httpx2
 
 from calendar_event_engine.db.db_cache import SQLiteDB
 from calendar_event_engine.logger import create_logger_from_designated_logger
@@ -25,10 +25,10 @@ def get_runner_submission(
     remote_submission_url: str, test_mode: bool, cache_db: SQLiteDB
 ) -> RunnerSubmission:
     try:
-        response = requests.get(remote_submission_url, timeout=30)
+        response = httpx2.get(remote_submission_url, timeout=30, follow_redirects=True)
         response.raise_for_status()
         json_submission: dict = response.json()
-    except requests.exceptions.RequestException as e:
+    except (httpx2.HTTPError, httpx2.InvalidURL) as e:
         raise RuntimeError(
             f"Failed to fetch runner submission from {remote_submission_url}: {e}"
         ) from e

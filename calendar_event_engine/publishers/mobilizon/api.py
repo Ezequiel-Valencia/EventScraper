@@ -1,13 +1,12 @@
 import json
 
-import httpx
+import httpx2
 from gql import Client
 from gql.transport.exceptions import (
     TransportProtocolError,
     TransportQueryError,
     TransportServerError,
 )
-from gql.transport.httpx import HTTPXTransport
 from graphql import DocumentNode
 from tenacity import (
     retry,
@@ -18,6 +17,7 @@ from tenacity import (
 
 from calendar_event_engine.logger import create_logger_from_designated_logger
 from calendar_event_engine.publishers.mobilizon import gql_requests as gqlr
+from calendar_event_engine.publishers.mobilizon.transport import HTTPX2Transport
 from calendar_event_engine.publishers.mobilizon.types import MobilizonEvent, Actor
 
 logger = create_logger_from_designated_logger(__name__)
@@ -30,7 +30,7 @@ TIMEOUT_SECONDS = 30
 _retry_transient = retry(
     reraise=True,
     retry=retry_if_exception_type(
-        (httpx.TransportError, TransportServerError, TransportProtocolError)
+        (httpx2.TransportError, TransportServerError, TransportProtocolError)
     ),
     stop=stop_after_attempt(4),
     wait=wait_exponential(multiplier=2),  # waits 2s, 4s, 8s
@@ -50,8 +50,8 @@ class MobilizonAPI:
         # The transport reads this dict on every request, so updating it after
         # (re)login is enough to authenticate subsequent calls.
         self._client = Client(
-            transport=HTTPXTransport(
-                url=endpoint, headers=self._headers, timeout=TIMEOUT_SECONDS
+            transport=HTTPX2Transport(
+                endpoint, headers=self._headers, timeout=TIMEOUT_SECONDS
             ),
             fetch_schema_from_transport=True,
         )
@@ -106,7 +106,7 @@ class MobilizonAPI:
 
     @_retry_transient
     def _upload_file(self, file_url: str) -> str:
-        with httpx.Client(timeout=TIMEOUT_SECONDS, follow_redirects=True) as http:
+        with httpx2.Client(timeout=TIMEOUT_SECONDS, follow_redirects=True) as http:
             file = http.get(file_url)
             file.raise_for_status()
             variables = {

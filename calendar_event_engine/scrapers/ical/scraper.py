@@ -1,9 +1,11 @@
 import copy
+import functools
 import os
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 
+import httpx2
 import icalendar
-import requests
 import validators
 from icalendar.cal import Calendar
 
@@ -19,6 +21,8 @@ from calendar_event_engine.types.submission import (
 from calendar_event_engine.utils.location import find_geolocation_from_address
 
 logger = create_logger_from_designated_logger(__name__)
+
+REQUEST_TIMEOUT_SECONDS = 30
 
 
 class ICALScraper(Scraper):
@@ -40,10 +44,17 @@ class ICALScraper(Scraper):
         all_events: list[AllEventsFromAGroup] = []
         logger.info(f"Getting events from calendar {group_event_kernel.group_name}")
         for ical_id in group_event_kernel.calendar_ids:
-            cal_text = requests.get(ical_id).text
-            calendar = icalendar.Calendar.from_ical(cal_text)
+            response = httpx2.get(
+                ical_id, timeout=REQUEST_TIMEOUT_SECONDS, follow_redirects=True
+            )
+            response.raise_for_status()
+            calendar = icalendar.Calendar.from_ical(response.text)
             events = _hydrate_event_template(
-                calendar, group_event_kernel.event_template
+                calendar,
+                group_event_kernel.event_template,
+                is_cached=functools.partial(
+                    self.cache_db.entry_already_in_cache, source_id=ical_id
+                ),
             )
             all_events.append(AllEventsFromAGroup(events, group_event_kernel, ical_id))
 
@@ -56,12 +67,21 @@ class ICALScraper(Scraper):
 
 
 def _hydrate_event_template(
-    calendar: Calendar, event_kernel: GenericEvent
+    calendar: Calendar,
+    event_kernel: GenericEvent,
+    is_cached: Callable[[str, str], bool] | None = None,
 ) -> list[GenericEvent]:
-    week_from_now = datetime.now(timezone.utc) + timedelta(days=7)
+    """
+    Events within the next week that are confirmed, filled into copies of `event_kernel`.
+
+    :param is_cached: Given an event's start time and title, whether it was already
+        published. Those events are skipped before the (slow) location lookup.
+    """
+    now = datetime.now(timezone.utc)
+    week_from_now = now + timedelta(days=7)
+    include_all_dates = os.getenv("TEST") == "True"
     events = []
     for event in calendar.walk("VEVENT"):
-        event_template = copy.deepcopy(event_kernel)
         start = event.start
         if not isinstance(start, datetime):
             start = datetime.combine(start, datetime.min.time(), timezone.utc)
@@ -71,39 +91,45 @@ def _hydrate_event_template(
         summary = str(event.get("SUMMARY"))
         status = event.get("STATUS")
         over_a_week = week_from_now < start
-        before_today = start < datetime.now(timezone.utc)
+        before_today = start < now
 
         # Have to search entire list because events aren't organized
-        if (over_a_week or before_today) and os.getenv("TEST") != "True":
+        if (over_a_week or before_today) and not include_all_dates:
             continue
-        elif status == "CONFIRMED":
-            event_template.title = summary
-            event_template.begins_on = start.isoformat()
-            event_template.ends_on = end.isoformat()
-            if "ATTACH" in event and validators.url(event.get("ATTACH")):
-                event_template.picture = event.get("ATTACH")
-            grabbed_description = (
-                "" if "DESCRIPTION" not in event else str(event.get("DESCRIPTION"))
+        if status != "CONFIRMED":
+            continue
+        if is_cached is not None and is_cached(start.isoformat(), summary):
+            continue
+
+        event_template = copy.deepcopy(event_kernel)
+        event_template.title = summary
+        event_template.begins_on = start.isoformat()
+        event_template.ends_on = end.isoformat()
+        attachment = str(event.get("ATTACH", ""))
+        if attachment and validators.url(attachment):
+            event_template.picture = attachment
+        grabbed_description = (
+            "" if "DESCRIPTION" not in event else str(event.get("DESCRIPTION"))
+        )
+        notif = ""
+        event_template.online_address = (
+            event_template.online_address
+            if "URL" not in event
+            else str(event.get("URL"))
+        )
+        if "LOCATION" in event:
+            parsed_location = _parse_retrieved_location(
+                str(event.get("LOCATION")), event_template.physical_address
             )
-            notif = ""
-            event_template.online_address = (
-                event_template.online_address
-                if "URL" not in event
-                else str(event.get("URL"))
+            event_template.physical_address, notif = find_geolocation_from_address(
+                parsed_location,
+                event_template.physical_address,
+                event_template.title,
             )
-            if "LOCATION" in event:
-                parsed_location = _parse_retrieved_location(
-                    str(event.get("LOCATION")), event_template.physical_address
-                )
-                event_template.physical_address, notif = find_geolocation_from_address(
-                    parsed_location,
-                    event_template.physical_address,
-                    event_template.title,
-                )
-            event_template.description = (
-                f"Automatically scraped by Event Bot {notif}: \n\n{grabbed_description}"
-            )
-            events.append(event_template)
+        event_template.description = (
+            f"Automatically scraped by Event Bot {notif}: \n\n{grabbed_description}"
+        )
+        events.append(event_template)
 
     return events
 

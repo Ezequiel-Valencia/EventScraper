@@ -1,5 +1,6 @@
 import json
-import requests
+
+import httpx2
 
 from calendar_event_engine.types.generics import GenericAddress, GenericEvent
 from calendar_event_engine.types.submission import (
@@ -10,42 +11,38 @@ from calendar_event_engine.types.submission import (
 )
 
 
-def none_if_not_present(x, dictionary):
-    return None if x not in dictionary else dictionary[x]
+_SCRAPER_TYPES_BY_NAME: dict[str, ScraperTypes] = {
+    "STATIC": ScraperTypes.STATIC,
+    "GOOGLE_CAL": ScraperTypes.GOOGLE_CAL,
+    "ICAL": ScraperTypes.ICAL,
+    "CUSTOM": ScraperTypes.CUSTOM,
+}
 
 
-def retrieve_source_type(source_type_string) -> ScraperTypes:
-    match source_type_string:
-        case "STATIC":
-            return ScraperTypes.STATIC
-        case "GOOGLE_CAL":
-            return ScraperTypes.GOOGLE_CAL
-        case "ICAL":
-            return ScraperTypes.ICAL
-        case "CUSTOM":
-            return ScraperTypes.CUSTOM
-    raise TypeError(
-        "Expected a string that resolves to a scraper type, instead got: "
-        + source_type_string
-    )
+def retrieve_source_type(source_type_string: str) -> ScraperTypes:
+    try:
+        return _SCRAPER_TYPES_BY_NAME[source_type_string]
+    except KeyError:
+        raise TypeError(
+            "Expected a string that resolves to a scraper type, instead got: "
+            + str(source_type_string)
+        ) from None
 
 
 def get_group_package(json_path: str) -> GroupPackage:
     try:
-        response = requests.get(json_path, timeout=30)
+        response = httpx2.get(json_path, timeout=30, follow_redirects=True)
         response.raise_for_status()
         group_schema: dict = response.json()
-    except requests.exceptions.RequestException as e:
+    except (httpx2.HTTPError, httpx2.InvalidURL) as e:
         raise RuntimeError(
             f"Failed to fetch group package from {json_path}: {e}"
         ) from e
     except json.JSONDecodeError as e:
         raise RuntimeError(f"Invalid JSON received from {json_path}: {e}") from e
 
-    group_package: GroupPackage = GroupPackage(
-        {},
-        none_if_not_present("name", group_schema),
-        none_if_not_present("description", group_schema),
+    group_package = GroupPackage(
+        {}, group_schema.get("name"), group_schema.get("description")
     )
 
     for group_name, group_info in group_schema["groupKernels"].items():
@@ -56,12 +53,12 @@ def get_group_package(json_path: str) -> GroupPackage:
         )
         event_kernel = GenericEvent(
             group_info["publisherInfo"],
-            none_if_not_present("title", group_info),
-            none_if_not_present("beginsOn", group_info),
-            none_if_not_present("defaultDescription", group_info),
-            none_if_not_present("endsOn", group_info),
+            group_info.get("title"),
+            group_info.get("beginsOn"),
+            group_info.get("defaultDescription"),
+            group_info.get("endsOn"),
             group_info["onlineAddress"],
-            none_if_not_present("phoneAddress", group_info),
+            group_info.get("phoneAddress"),
             event_address,
         )
 
@@ -71,17 +68,14 @@ def get_group_package(json_path: str) -> GroupPackage:
         if scraper_type == ScraperTypes.STATIC:
             time_info = TimeInfo(group_info["defaultTimes"], group_info["endDate"])
 
-        if scraper_type not in group_package.scraper_type_and_kernels:
-            group_package.scraper_type_and_kernels[scraper_type] = []
-
-        group_package.scraper_type_and_kernels[scraper_type].append(
+        group_package.scraper_type_and_kernels.setdefault(scraper_type, []).append(
             GroupEventsKernel(
                 event_kernel,
                 group_name,
                 calendar_ids=calendar_ids,
                 scraper_type=scraper_type,
                 json_source_url=json_path,
-                time_info=time_info,
+                default_time_info=time_info,
             )
         )
 

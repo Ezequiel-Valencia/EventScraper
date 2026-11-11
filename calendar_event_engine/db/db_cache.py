@@ -10,33 +10,32 @@ from calendar_event_engine.db.uploaded_events_driver import (
 )
 from calendar_event_engine.logger import create_logger_from_designated_logger
 
-from sqlite3 import Cursor
-
 logger = create_logger_from_designated_logger(__name__)
 
 
+def _database_path() -> str:
+    cache_db_dir = os.environ.get("CACHE_DB_PATH")
+    if cache_db_dir is not None:
+        return os.path.join(cache_db_dir, "event_cache.db")
+    return os.path.join("..", "event_cache.db")
+
+
 class SQLiteDB:
+    """Records which events were already published, so they are not published twice."""
+
     sql_db_connection: sqlite3.Connection
-    es_driver: EventSourceDriver
-    ue_driver: UploadedEventsDriver
-    com_driver: CombineDBDriver
-    __fake_UUID: int = 0
 
     def __init__(self, test_mode: bool = False):
-        if test_mode:
-            self.sql_db_connection = sqlite3.connect(":memory:")
-        else:
-            cache_db_path = os.environ.get("CACHE_DB_PATH")
-            if cache_db_path is not None:
-                self.sql_db_connection = sqlite3.connect(
-                    cache_db_path + "/event_cache.db"
-                )
-            else:
-                self.sql_db_connection = sqlite3.connect("../event_cache.db")
+        self.sql_db_connection = sqlite3.connect(
+            ":memory:" if test_mode else _database_path()
+        )
+        # SQLite ignores FOREIGN KEY clauses (and so ON DELETE CASCADE) unless
+        # this is enabled on every connection.
+        self.sql_db_connection.execute("PRAGMA foreign_keys = ON")
 
         self.ue_driver = UploadedEventsDriver(self.sql_db_connection)
         self.es_driver = EventSourceDriver(self.sql_db_connection)
-        self.com_driver = CombineDBDriver()
+        self.com_driver = CombineDBDriver(self.sql_db_connection)
 
     def close(self):
         self.sql_db_connection.close()
@@ -47,40 +46,32 @@ class SQLiteDB:
     def __exit__(self, exc_type, exc_value, traceback) -> None:
         self.close()
 
-    def delete_all_month_old_events(self):
-        self.ue_driver.delete_all_month_old_events(self.sql_db_connection)
+    def delete_all_month_old_events(self) -> None:
+        self.ue_driver.delete_all_month_old_events()
 
-    def select_all_rows_with_calendar_id(self, source) -> Cursor:
-        return self.com_driver.select_all_rows_with_calendar_id(
-            self.sql_db_connection, source
-        )
+    def select_all_rows_with_calendar_id(self, calendar_id: str) -> sqlite3.Cursor:
+        return self.com_driver.select_all_rows_with_calendar_id(calendar_id)
 
-    def get_last_event_date_for_source_id(self, calendar_id) -> datetime | None:
-        return self.com_driver.get_last_event_date_for_source_id(
-            self.sql_db_connection, calendar_id
-        )
+    def get_last_event_date_for_source_id(self, calendar_id: str) -> datetime | None:
+        return self.com_driver.get_last_event_date_for_source_id(calendar_id)
 
     def no_entries_with_source_id(self, calendar_id: str) -> bool:
-        res = self.select_all_rows_with_calendar_id(calendar_id)
-        return len(res.fetchall()) == 0
+        return not self.com_driver.has_entries_with_calendar_id(calendar_id)
 
     def entry_already_in_cache(self, date: str, title: str, source_id: str) -> bool:
-        return self.com_driver.entry_already_in_cache(
-            self.sql_db_connection, date, title, source_id
-        )
+        return self.com_driver.entry_already_in_cache(date, title, source_id)
 
     def insert_uploaded_event(
         self, row_to_add: UploadedEventRow, event_source: EventSource
-    ):
-        primary_key = self.ue_driver.insert_uploaded_event(
-            self.sql_db_connection, row_to_add
-        )
-        self.es_driver.insert_uploaded_event(
-            self.sql_db_connection, primary_key, event_source
-        )
+    ) -> None:
+        # Both rows are written in one transaction so a failure can't leave an
+        # uploaded event without its source (or vice versa).
+        with self.sql_db_connection:
+            primary_key = self.ue_driver.insert_uploaded_event(row_to_add)
+            self.es_driver.insert_uploaded_event(primary_key, event_source)
 
     def select_all_from_upload_table(self) -> sqlite3.Cursor:
-        return self.ue_driver.select_all_from_upload_table(self.sql_db_connection)
+        return self.ue_driver.select_all_from_upload_table()
 
     def select_all_from_event_source_table(self) -> sqlite3.Cursor:
-        return self.es_driver.select_all_from_event_source_table(self.sql_db_connection)
+        return self.es_driver.select_all_from_event_source_table()

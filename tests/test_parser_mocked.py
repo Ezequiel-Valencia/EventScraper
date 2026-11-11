@@ -1,9 +1,9 @@
 import json
 import os
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-import requests
+import httpx2
 
 from calendar_event_engine.parser.package import get_group_package
 from calendar_event_engine.parser.submission import get_runner_submission
@@ -17,25 +17,16 @@ def _load_fixture(name: str) -> str:
         return f.read()
 
 
-def _mock_response(status_code: int = 200, text: str = "{}") -> MagicMock:
-    mock = MagicMock()
-    mock.status_code = status_code
-    mock.text = text
-    try:
-        mock.json.return_value = json.loads(text)
-    except json.JSONDecodeError as e:
-        mock.json.side_effect = e
-    if status_code >= 400:
-        mock.raise_for_status.side_effect = requests.exceptions.HTTPError(response=mock)
-    else:
-        mock.raise_for_status.return_value = None
-    return mock
+def _mock_response(
+    status_code: int = 200, text: str = "{}", url: str = "https://fixtures.local/"
+) -> httpx2.Response:
+    return httpx2.Response(status_code, text=text, request=httpx2.Request("GET", url))
 
 
 class TestGetGroupPackageMocked(unittest.TestCase):
     def test_successful_parse(self):
         fixture = _load_fixture("test_group_package.json")
-        with patch("requests.get", return_value=_mock_response(text=fixture)):
+        with patch("httpx2.get", return_value=_mock_response(text=fixture)):
             package = get_group_package(
                 "https://fixtures.local/test_group_package.json"
             )
@@ -51,31 +42,29 @@ class TestGetGroupPackageMocked(unittest.TestCase):
 
     def test_network_error_raises_runtime_error(self):
         with patch(
-            "requests.get",
-            side_effect=requests.exceptions.ConnectionError("Connection refused"),
+            "httpx2.get",
+            side_effect=httpx2.ConnectError("Connection refused"),
         ):
             with self.assertRaises(RuntimeError) as ctx:
                 get_group_package("https://unreachable.local/package.json")
         self.assertIn("Failed to fetch group package", str(ctx.exception))
 
     def test_http_error_raises_runtime_error(self):
-        with patch("requests.get", return_value=_mock_response(status_code=404)):
+        with patch("httpx2.get", return_value=_mock_response(status_code=404)):
             with self.assertRaises(RuntimeError) as ctx:
                 get_group_package("https://fixtures.local/missing.json")
         self.assertIn("Failed to fetch group package", str(ctx.exception))
 
     def test_invalid_json_raises_runtime_error(self):
-        with patch(
-            "requests.get", return_value=_mock_response(text="not valid json{{")
-        ):
+        with patch("httpx2.get", return_value=_mock_response(text="not valid json{{")):
             with self.assertRaises(RuntimeError) as ctx:
                 get_group_package("https://fixtures.local/bad.json")
         self.assertIn("Invalid JSON", str(ctx.exception))
 
     def test_timeout_raises_runtime_error(self):
         with patch(
-            "requests.get",
-            side_effect=requests.exceptions.Timeout("Request timed out"),
+            "httpx2.get",
+            side_effect=httpx2.ReadTimeout("Request timed out"),
         ):
             with self.assertRaises(RuntimeError) as ctx:
                 get_group_package("https://fixtures.local/slow.json")
@@ -88,7 +77,7 @@ class TestGetRunnerSubmissionMocked(unittest.TestCase):
             {"Mobilizon": ["https://fixtures.local/test_group_package.json"]}
         )
 
-        def side_effect(url, timeout=30):
+        def side_effect(url, **kwargs):
             if "test_group_package" in url:
                 return _mock_response(text=group_fixture_text)
             return _mock_response(text=submission_fixture)
@@ -97,7 +86,7 @@ class TestGetRunnerSubmissionMocked(unittest.TestCase):
 
     def test_successful_parse(self):
         group_fixture = _load_fixture("test_group_package.json")
-        with patch("requests.get", side_effect=self._make_side_effect(group_fixture)):
+        with patch("httpx2.get", side_effect=self._make_side_effect(group_fixture)):
             submission = get_runner_submission(
                 "https://fixtures.local/submission.json", True, None
             )
@@ -106,8 +95,8 @@ class TestGetRunnerSubmissionMocked(unittest.TestCase):
 
     def test_network_error_raises_runtime_error(self):
         with patch(
-            "requests.get",
-            side_effect=requests.exceptions.ConnectionError("Connection refused"),
+            "httpx2.get",
+            side_effect=httpx2.ConnectError("Connection refused"),
         ):
             with self.assertRaises(RuntimeError) as ctx:
                 get_runner_submission(
@@ -116,7 +105,7 @@ class TestGetRunnerSubmissionMocked(unittest.TestCase):
         self.assertIn("Failed to fetch runner submission", str(ctx.exception))
 
     def test_http_error_raises_runtime_error(self):
-        with patch("requests.get", return_value=_mock_response(status_code=500)):
+        with patch("httpx2.get", return_value=_mock_response(status_code=500)):
             with self.assertRaises(RuntimeError) as ctx:
                 get_runner_submission(
                     "https://fixtures.local/submission.json", True, None
@@ -124,9 +113,7 @@ class TestGetRunnerSubmissionMocked(unittest.TestCase):
         self.assertIn("Failed to fetch runner submission", str(ctx.exception))
 
     def test_invalid_json_raises_runtime_error(self):
-        with patch(
-            "requests.get", return_value=_mock_response(text="not valid json{{")
-        ):
+        with patch("httpx2.get", return_value=_mock_response(text="not valid json{{")):
             with self.assertRaises(RuntimeError) as ctx:
                 get_runner_submission(
                     "https://fixtures.local/submission.json", True, None

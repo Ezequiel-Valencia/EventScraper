@@ -46,41 +46,36 @@ def hydrate_event_template_with_legitimate_times(
     the end date has been reached.
     """
 
-    #############################################################
-    # There can multiple days in a week when an event can occur #
-    #############################################################
-    times = group_kernel.default_time_info.default_times
+    time_info = group_kernel.default_time_info
+    if time_info is None:
+        raise ValueError(f"Static group {group_kernel.group_name} has no default times")
 
-    generated_events = []
-
-    end_date = datetime.fromisoformat(group_kernel.default_time_info.end_time)
+    end_date = datetime.fromisoformat(time_info.end_time)
     now = datetime.now().astimezone()
+    if now.date() > end_date.date():
+        logger.info(f"Static Event {group_kernel.group_name} Has Expired")
+        return []
 
-    if now.date() <= end_date.date():
-        for t in times:
-            event: GenericEvent = copy.deepcopy(group_kernel.event_template)
-            start_time = datetime.fromisoformat(t[0])
-            end_time = datetime.fromisoformat(t[1])
+    # There can be multiple days in a week when an event can occur
+    generated_events = []
+    for start_string, end_string in time_info.default_times:
+        start_time = datetime.fromisoformat(start_string)
+        end_time = datetime.fromisoformat(end_string)
 
-            time_difference_weeks = (
-                now - start_time
-            ).days // 7  # Floor division that can result in week prior event
+        # Move the first occurrence forward to the next one that hasn't started.
+        # Floor division can land on the week prior, hence the extra check.
+        weeks_elapsed = timedelta(weeks=(now - start_time).days // 7)
+        start_time += weeks_elapsed
+        end_time += weeks_elapsed
+        if start_time < now:
+            start_time += timedelta(weeks=1)
+            end_time += timedelta(weeks=1)
+        if start_time.date() > end_date.date():
+            continue
 
-            start_time += timedelta(weeks=time_difference_weeks)
-            end_time += timedelta(weeks=time_difference_weeks)
+        event: GenericEvent = copy.deepcopy(group_kernel.event_template)
+        event.begins_on = start_time.astimezone().isoformat()
+        event.ends_on = end_time.astimezone().isoformat()
+        generated_events.append(event)
 
-            if start_time < now:
-                start_time += timedelta(weeks=1)
-                end_time += timedelta(weeks=1)
-                if start_time > end_date:
-                    return []
-
-            event.begins_on = start_time.astimezone().isoformat()
-            event.ends_on = end_time.astimezone().isoformat()
-
-            generated_events.append(event)
-
-        return generated_events
-
-    logger.info(f"Static Event {group_kernel.group_name} Has Expired")
-    return []
+    return generated_events

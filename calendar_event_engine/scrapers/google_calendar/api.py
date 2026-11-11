@@ -98,21 +98,23 @@ class GCalAPI:
             weekFromNow = datetime.now().astimezone() + timedelta(days=7)
             weekFromNowStr = weekFromNow.isoformat()
 
-            events_result = (
-                self._apiClient.events()
-                .list(
-                    calendarId=calendarId,
-                    timeMin=stringDateLastEvent,
-                    timeMax=weekFromNowStr,
-                    singleEvents=True,
-                    orderBy="startTime",
-                )
-                .execute()
+            events_api = self._apiClient.events()
+            request = events_api.list(
+                calendarId=calendarId,
+                timeMin=stringDateLastEvent,
+                timeMax=weekFromNowStr,
+                singleEvents=True,
+                orderBy="startTime",
             )
-            googleEvents = events_result.get("items", [])
+            # Results are paginated; keep requesting until there are no more pages.
+            googleEvents: list[dict] = []
+            while request is not None:
+                events_result = request.execute()
+                googleEvents.extend(events_result.get("items", []))
+                request = events_api.list_next(request, events_result)
             if len(googleEvents) == 0:
-                logger.info(f"No upcoming events for calendarID {calendarId}\n")
-                return googleEvents
+                logger.info(f"No upcoming events for calendarID {calendarId}")
+                return []
 
             events: list[GenericEvent] = []
             for googleEvent in googleEvents:
@@ -121,7 +123,7 @@ class GCalAPI:
                     eventsToUpload=events,
                     checkCacheForEvent=checkCacheFunction,
                     calendarId=calendarId,
-                    eventKernel=copy.deepcopy(eventKernel),
+                    eventKernel=eventKernel,
                 )
 
             return events
@@ -158,6 +160,7 @@ def _process_google_event(
             endTimeGooglEvent.replace("Z", "+00:00")
         ).astimezone()
         if not checkCacheForEvent(startDateTime.isoformat(), title, calendarId):
+            eventKernel = copy.deepcopy(eventKernel)
             eventAddress, default_location_notif = find_geolocation_from_address(
                 parse_google_location(
                     googleEvent.get("location"), eventKernel.physical_address

@@ -1,59 +1,49 @@
 import datetime
 import os
 import time
-import traceback
-from urllib.error import HTTPError
-
-import requests
 
 from slack_sdk.webhook import WebhookClient
 
 from calendar_event_engine.db.db_cache import SQLiteDB
-from calendar_event_engine.filter import normalize_generic_event
 from calendar_event_engine.logger import create_logger_from_designated_logger
+from calendar_event_engine.notifications import (
+    Priority,
+    send_slack_alert,
+    set_slack_webhook,
+)
 from calendar_event_engine.parser.submission import get_runner_submission
 from calendar_event_engine.publishers.abc_publisher import Publisher
 from calendar_event_engine.scrapers.abc_scraper import Scraper
+from calendar_event_engine.scrapers.google_calendar.api import ExpiredToken
 from calendar_event_engine.types.custom_scraper import CustomScraperJob
 from calendar_event_engine.types.submission import (
-    GroupPackage,
     AllEventsFromAGroup,
-    GroupEventsKernel,
+    GroupPackage,
     ScraperTypes,
 )
 from calendar_event_engine.types.submission_handlers import RunnerSubmission
-from calendar_event_engine.scrapers.google_calendar.api import ExpiredToken
-from calendar_event_engine.globals import get_slack_webhook, set_slack_webhook
 
 logger = create_logger_from_designated_logger(__name__)
 
+# Days between scrapes, and how long to back off after an unexpected error.
+DAYS_BETWEEN_SCRAPES = 2
+DAYS_AFTER_UNKNOWN_ERROR = 7
+# The submission is fetched from a remote server; a network blip there
+# shouldn't cost a whole scraping cycle.
+SECONDS_BEFORE_SUBMISSION_RETRY = 60 * 60
+# Scrapes start at this hour of the day, local time.
+SCRAPE_HOUR = 2
 
-def _publish(publisher: Publisher, events: list[AllEventsFromAGroup]):
-    for i in range(3):
-        try:
-            normalize_generic_event(events)
-            publisher.upload(events)
-            break
-        except (HTTPError, requests.exceptions.RequestException, ValueError) as err:
-            msg = f"The publisher {publisher.__class__.__name__} was unable to upload events."
-            if isinstance(err, HTTPError) and "too many requests" in err.reason.lower():
-                msg += f" The reason being to many requests where made to the publisher, and it returned a {err.code} error code."
-                msg += f" This is attempt num: {i + 1}"
-                logger.warning(msg=msg)
-                time.sleep(120)
-            else:
-                logger.error(msg=msg, exc_info=err)
-                msg += f" {err}"
-                web_hook = get_slack_webhook()
-                if web_hook is not None:
-                    web_hook.send(
-                        attachments=[
-                            _produce_slack_message(
-                                "#e6e209", "Publisher Error", msg, "Medium"
-                            )
-                        ]
-                    )
-                time.sleep(30)
+
+def _publish(publisher: Publisher, events: list[AllEventsFromAGroup]) -> None:
+    try:
+        publisher.upload(events)
+    except Exception as err:
+        msg = (
+            f"The publisher {publisher.__class__.__name__} was unable to upload events."
+        )
+        logger.error(msg, exc_info=err)
+        send_slack_alert("Publisher Error", f"{msg} {err}", Priority.MEDIUM)
 
 
 def _scraper_scrapes_and_publishes(
@@ -61,113 +51,102 @@ def _scraper_scrapes_and_publishes(
     scraper_type: ScraperTypes,
     publisher: Publisher,
     group_package: GroupPackage,
-):
+) -> None:
     scraper.connect_to_source()
-    group_event_kernels: list[GroupEventsKernel] = (
-        group_package.scraper_type_and_kernels[scraper_type]
-    )
-    for event_kernel in group_event_kernels:
-        # Scrape
-        events: list[AllEventsFromAGroup] | None = None
-        try:
-            events = scraper.retrieve_from_source(event_kernel)
-        except (HTTPError, requests.exceptions.RequestException, ValueError) as err:
-            msg = f"The scraper {scraper.get_source_type} produced an error when grabbing from the source {event_kernel.group_name}."
-            if isinstance(err, HTTPError):
-                msg += f" With HTTP error code {err.code}"
-            logger.error(msg=msg, exc_info=err)
-            web_hook = get_slack_webhook()
-            if web_hook is not None:
-                web_hook.send(
-                    attachments=[
-                        _produce_slack_message(
-                            "#e6e209", "Scraper Request Error", msg, "Medium"
-                        )
-                    ]
-                )
-
-        # Publish
-        if events is not None:
-            _publish(publisher=publisher, events=events)
-
-    scraper.close_connection_to_source()
-
-
-def _custom_scrapers(custom_scrapers: dict[Publisher, list[CustomScraperJob]]):
-    for publisher in custom_scrapers.keys():
-        publisher.connect()
-        for scrap in custom_scrapers[publisher]:
+    try:
+        for event_kernel in group_package.scraper_type_and_kernels[scraper_type]:
+            # One broken source must not stop the remaining ones from being scraped.
             try:
-                logger.info(f"Using custom scraper {scrap.scraper_name}")
-                scrap.custom_scraper.connect_to_source()
-                events = scrap.custom_scraper.retrieve_from_source(None)
-                normalize_generic_event(events)
-                publisher.upload(events)
-            except Exception as custom_err:
-                logger.error(
-                    "Exception for custom scraper: " + scrap.scraper_name,
-                    custom_err,
+                events = scraper.retrieve_from_source(event_kernel)
+            except ExpiredToken:
+                raise
+            except Exception as err:
+                msg = (
+                    f"The scraper {scraper.get_source_type().value} produced an error "
+                    f"when grabbing from the source {event_kernel.group_name}."
                 )
-        publisher.close()
+                logger.error(msg, exc_info=err)
+                send_slack_alert(
+                    "Scraper Request Error", f"{msg} {err}", Priority.MEDIUM
+                )
+                continue
+
+            _publish(publisher=publisher, events=events)
+    finally:
+        scraper.close_connection_to_source()
+
+
+def _custom_scrapers(
+    custom_scrapers: dict[Publisher, list[CustomScraperJob]],
+) -> None:
+    for publisher, jobs in custom_scrapers.items():
+        publisher.connect()
+        try:
+            for job in jobs:
+                try:
+                    logger.info(f"Using custom scraper {job.scraper_name}")
+                    job.custom_scraper.connect_to_source()
+                    try:
+                        events = job.custom_scraper.retrieve_from_source(None)
+                    finally:
+                        job.custom_scraper.close_connection_to_source()
+                    publisher.upload(events)
+                except Exception as custom_err:
+                    logger.error(
+                        f"Exception for custom scraper: {job.scraper_name}",
+                        exc_info=custom_err,
+                    )
+        finally:
+            publisher.close()
 
 
 def _runner(
     runner_submission: RunnerSubmission,
     custom_scrapers: dict[Publisher, list[CustomScraperJob]] | None = None,
-):
-    submitted_publishers: dict[Publisher, list[GroupPackage]] = (
-        runner_submission.publishers
-    )
-    for publisher in submitted_publishers.keys():
+) -> None:
+    for publisher, group_packages in runner_submission.publishers.items():
         publisher.connect()
-        group_package: GroupPackage
-        for group_package in submitted_publishers[publisher]:
-            logger.info(f"Reading Group Package: {group_package.package_name}")
+        try:
+            for group_package in group_packages:
+                logger.info(f"Reading Group Package: {group_package.package_name}")
 
-            for scraper_type in group_package.scraper_type_and_kernels.keys():
-                scraper: Scraper = runner_submission.respective_scrapers[scraper_type]
-                try:
-                    _scraper_scrapes_and_publishes(
-                        scraper=scraper,
-                        scraper_type=scraper_type,
-                        publisher=publisher,
-                        group_package=group_package,
-                    )
-                except ExpiredToken:
-                    logger.warning(
-                        "Expired token.json needs to be replaced. Will continue scraping other types"
-                    )
-
-        publisher.close()
+                for scraper_type in group_package.scraper_type_and_kernels:
+                    scraper = runner_submission.respective_scrapers.get(scraper_type)
+                    if scraper is None:
+                        logger.warning(
+                            f"No scraper available for type {scraper_type.value}, "
+                            f"skipping it in {group_package.package_name}"
+                        )
+                        continue
+                    try:
+                        _scraper_scrapes_and_publishes(
+                            scraper=scraper,
+                            scraper_type=scraper_type,
+                            publisher=publisher,
+                            group_package=group_package,
+                        )
+                    except ExpiredToken:
+                        logger.warning(
+                            "Expired token.json needs to be replaced. Will continue scraping other types"
+                        )
+                        send_slack_alert(
+                            "Expired Token", "Replace token.json", Priority.MEDIUM
+                        )
+        finally:
+            publisher.close()
 
     if custom_scrapers:
         _custom_scrapers(custom_scrapers=custom_scrapers)
 
 
-def _days_to_sleep(days):
-    now = datetime.datetime.now()
-    seconds_from_zero = now.hour * 60 * 60
-    time_at_2am = 2 * 60 * 60
-    time_to_sleep = time_at_2am
-    if seconds_from_zero > time_at_2am:
-        time_to_sleep = ((23 * 60 * 60) - seconds_from_zero) + time_at_2am
-    else:
-        time_to_sleep = time_at_2am - seconds_from_zero
-
-    return time_to_sleep + (60 * 60 * 24 * days)
-
-
-def _produce_slack_message(color, title, text, priority):
-    return {
-        "color": color,
-        "author_name": "CTEvent Scraper",
-        "author_icon": "https://ctgrassroots.org/favicon.ico",
-        "title": title,
-        "title_link": "google.com",
-        "text": text,
-        "fields": [{"title": "Priority", "value": priority, "short": "false"}],
-        "footer": "CTEvent Scraper",
-    }
+def _days_to_sleep(days: int, now: datetime.datetime | None = None) -> float:
+    """Seconds until the next SCRAPE_HOUR o'clock, plus `days` whole days."""
+    now = now or datetime.datetime.now()
+    next_run = now.replace(hour=SCRAPE_HOUR, minute=0, second=0, microsecond=0)
+    if next_run <= now:
+        next_run += datetime.timedelta(days=1)
+    next_run += datetime.timedelta(days=days)
+    return (next_run - now).total_seconds()
 
 
 def start_event_engine(
@@ -179,55 +158,46 @@ def start_event_engine(
 ):
     logger.info("Scraper Started")
     set_slack_webhook(slack_webhook)
-    sleeping = 2
     while True:
         #####################
         # Create Submission #
         #####################
-
-        submission: RunnerSubmission = get_runner_submission(
-            remote_json_url, test_mode, cache_db
-        )
+        try:
+            submission: RunnerSubmission = get_runner_submission(
+                remote_json_url, test_mode, cache_db
+            )
+        except Exception as err:
+            logger.error(
+                f"Unable to load the runner submission, retrying in "
+                f"{SECONDS_BEFORE_SUBMISSION_RETRY // 60} minutes",
+                exc_info=err,
+            )
+            send_slack_alert(
+                "Submission Error",
+                f"Unable to load the runner submission: {err}",
+                Priority.MEDIUM,
+            )
+            time.sleep(SECONDS_BEFORE_SUBMISSION_RETRY)
+            continue
 
         ######################
         # Execute Submission #
         ######################
-        time_to_sleep = _days_to_sleep(sleeping)
+        days_to_sleep = DAYS_BETWEEN_SCRAPES
         logger.info("Scraping")
         try:
+            # Old events can no longer be scraped again, so they don't need caching.
+            cache_db.delete_all_month_old_events()
             _runner(submission, custom_scrapers)
-            logger.info("Sleeping " + str(sleeping) + " Days Until Next Scrape")
-        except ExpiredToken:
-            time_to_sleep = _days_to_sleep(2)
-            logger.info("Sleeping " + str(sleeping) + " Days Until Next Scrape")
-            if slack_webhook is not None:
-                slack_webhook.send(
-                    attachments=[
-                        _produce_slack_message(
-                            "#e6e209", "Expired Token", "Replace token.json", "Medium"
-                        )
-                    ]
-                )
-
         except Exception as e:
-            logger.error("Unknown Error")
-            logger.error(e)
-            logger.error(traceback.format_exc())
-            logger.error("Going to Sleep for 7 days")
-            if slack_webhook is not None:
-                slack_webhook.send(
-                    attachments=[
-                        _produce_slack_message(
-                            "#ab1a13",
-                            "Event Scraper Unknown Error",
-                            "Check logs for error.",
-                            "High",
-                        )
-                    ]
-                )
-            time_to_sleep = _days_to_sleep(7)
+            logger.error("Unknown Error", exc_info=e)
+            send_slack_alert(
+                "Event Scraper Unknown Error", "Check logs for error.", Priority.HIGH
+            )
+            days_to_sleep = DAYS_AFTER_UNKNOWN_ERROR
 
-        time.sleep(time_to_sleep)
+        logger.info(f"Sleeping {days_to_sleep} Days Until Next Scrape")
+        time.sleep(_days_to_sleep(days_to_sleep))
 
 
 if __name__ == "__main__":
@@ -235,12 +205,10 @@ if __name__ == "__main__":
     env_webhook = (
         None if slack_webhook_url is None else WebhookClient(slack_webhook_url)
     )
-    env_test_mode = False if "TEST_MODE" not in os.environ else True
+    env_test_mode = "TEST_MODE" in os.environ
     submission_json_path = os.getenv("RUNNER_SUBMISSION_JSON_PATH")
     if submission_json_path is None:
-        err = NotImplementedError("Did not find JSON submission path")
-        logger.error(err)
-        raise err
+        raise SystemExit("RUNNER_SUBMISSION_JSON_PATH is not set")
 
     with SQLiteDB(env_test_mode) as env_cache_db:
         start_event_engine(

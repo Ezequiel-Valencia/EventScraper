@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from calendar_event_engine.db.db_cache import SQLiteDB
 from calendar_event_engine.db.event_source_driver import EventSource
 from calendar_event_engine.db.uploaded_events_driver import UploadedEventRow
@@ -7,6 +9,13 @@ from calendar_event_engine.types.submission import ScraperTypes
 
 
 # TODO: Test getting the last event uploaded for a specific group
+
+
+# Group 2's events must stay "recent" whenever the tests run, or the month-old
+# cleanup would delete them too.
+_SOON = (datetime.now(timezone.utc) + timedelta(days=30)).replace(microsecond=0)
+_SOON_ISO = _SOON.isoformat()
+_LATER_ISO = (_SOON + timedelta(days=31)).isoformat()
 
 
 class TestEventTable(unittest.TestCase):
@@ -33,18 +42,10 @@ class TestEventTable(unittest.TestCase):
     ]
 
     group2: [UploadedEventRow] = [
-        UploadedEventRow(
-            "uuid4", "id1", "title1", "2027-01-04T10:00:00-04:00", "gID2", group2Name
-        ),
-        UploadedEventRow(
-            "uuid5", "id1", "title1", "2027-01-04T10:00:00-04:00", "gID2", group2Name
-        ),
-        UploadedEventRow(
-            "uuid6", "id1", "title1", "2027-01-04T10:00:00-04:00", "gID2", group2Name
-        ),
-        UploadedEventRow(
-            "uuid7", "id1", "title1", "2027-02-04T10:00:00-04:00", "gID2", group2Name
-        ),
+        UploadedEventRow("uuid4", "id1", "title1", _SOON_ISO, "gID2", group2Name),
+        UploadedEventRow("uuid5", "id1", "title1", _SOON_ISO, "gID2", group2Name),
+        UploadedEventRow("uuid6", "id1", "title1", _SOON_ISO, "gID2", group2Name),
+        UploadedEventRow("uuid7", "id1", "title1", _LATER_ISO, "gID2", group2Name),
     ]
     group2Source: [EventSource] = [
         EventSource("uuid4", "web", sourceGroup2, ScraperTypes.STATIC.value),
@@ -143,7 +144,43 @@ class TestEventTable(unittest.TestCase):
         self.insertGroup(db, self.group2, self.group2Source)
         lastEventUploaded = db.get_last_event_date_for_source_id(self.sourceGroup2)
         assert lastEventUploaded is not None
-        self.assertEqual("2027-02-04T10:00:00-04:00", lastEventUploaded.isoformat())
+        self.assertEqual(_LATER_ISO, lastEventUploaded.isoformat())
+
+    def test_RemoveOldEventsCascadesToEventSource(self):
+        db = SQLiteDB(True)
+        self.addCleanup(db.close)
+        self.insertGroup(db, self.group1, self.group1Source)
+        self.insertGroup(db, self.group2, self.group2Source)
+
+        db.delete_all_month_old_events()
+        sources = db.select_all_from_event_source_table().fetchall()
+        self.assertEqual(len(self.group2), len(sources))
+        self.assertTrue(db.no_entries_with_source_id(self.sourceGroup1))
+
+    def test_GetLastEventComparesInstantsNotStrings(self):
+        db = SQLiteDB(True)
+        self.addCleanup(db.close)
+        # As strings "...T23:00:00-08:00" sorts first, but it is the later instant.
+        rows = [
+            ("a", "2030-01-01T23:00:00-08:00"),
+            ("b", "2030-01-02T01:00:00+00:00"),
+        ]
+        for uuid, date in rows:
+            db.insert_uploaded_event(
+                UploadedEventRow(uuid, "id", "title", date, 1, "group"),
+                EventSource(uuid, "web", "cal", ScraperTypes.ICAL.value),
+            )
+        last = db.get_last_event_date_for_source_id("cal")
+        self.assertEqual("2030-01-01T23:00:00-08:00", last.isoformat())
+
+    def test_FailedInsertLeavesNoPartialRows(self):
+        db = SQLiteDB(True)
+        self.addCleanup(db.close)
+        bad_source = EventSource("uuid", "web", "cal", ScraperTypes.ICAL.value)
+        bad_source.website_url = object()  # sqlite3 can't bind this
+        with self.assertRaises(Exception):
+            db.insert_uploaded_event(self.group1[0], bad_source)
+        self.assertEqual([], db.select_all_from_upload_table().fetchall())
 
 
 if __name__ == "__main__":

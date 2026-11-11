@@ -1,6 +1,5 @@
 import sqlite3
 from datetime import datetime
-from sqlite3 import Cursor
 
 from calendar_event_engine.db.event_source_driver import EventSourceDriver
 from calendar_event_engine.db.uploaded_events_driver import UploadedEventsDriver
@@ -8,64 +7,54 @@ from calendar_event_engine.logger import create_logger_from_designated_logger
 
 logger = create_logger_from_designated_logger(__name__)
 
+_UE = UploadedEventsDriver.uploaded_events_table_name
+_ES = EventSourceDriver.event_source_table_name
+_JOIN = f"{_UE} INNER JOIN {_ES} ON {_UE}.id = {_ES}.id"
+
 
 class CombineDBDriver:
-    event_source_table_name: str = EventSourceDriver.event_source_table_name
-    uploaded_events_table_name: str = UploadedEventsDriver.uploaded_events_table_name
+    """Queries that span the uploaded_events and event_source tables."""
 
-    allColumns = f"""{uploaded_events_table_name}.uuid, {uploaded_events_table_name}.user_id,
-        {uploaded_events_table_name}.title, {uploaded_events_table_name}.date,
-        {uploaded_events_table_name}.group_id, {uploaded_events_table_name}.group_name,
-        {event_source_table_name}.websiteURL, {event_source_table_name}.calendar_id,
-        {event_source_table_name}.sourceType"""
+    allColumns = f"""{_UE}.uuid, {_UE}.user_id, {_UE}.title, {_UE}.date,
+        {_UE}.group_id, {_UE}.group_name,
+        {_ES}.websiteURL, {_ES}.calendar_id, {_ES}.sourceType"""
 
-    def select_all_rows_with_calendar_id(
-        self, db_connection: sqlite3.Connection, calendar_id: str
-    ) -> Cursor:
-        db_cursor = db_connection.cursor()
-        # Comma at the end of (groupID,) turns it into a tuple
-        res = db_cursor.execute(
-            f"""SELECT {self.allColumns} FROM {self.uploaded_events_table_name}
-                                INNER JOIN {self.event_source_table_name} ON
-                                {self.uploaded_events_table_name}.id={self.event_source_table_name}.id
-                                WHERE calendar_id = ?""",
+    def __init__(self, db_connection: sqlite3.Connection):
+        self._connection = db_connection
+
+    def select_all_rows_with_calendar_id(self, calendar_id: str) -> sqlite3.Cursor:
+        return self._connection.execute(
+            f"SELECT {self.allColumns} FROM {_JOIN} WHERE calendar_id = ?",
             (calendar_id,),
         )
-        return res
 
-    def get_last_event_date_for_source_id(
-        self, db_connection: sqlite3.Connection, calendar_id
-    ) -> datetime | None:
-        db_cursor = db_connection.cursor()
-        res = db_cursor.execute(
-            f"""SELECT date FROM {self.uploaded_events_table_name}
-                                INNER JOIN {self.event_source_table_name} ON
-                                {self.uploaded_events_table_name}.id={self.event_source_table_name}.id
-                                WHERE calendar_id = ?
-                                ORDER BY date DESC LIMIT 1""",
+    def has_entries_with_calendar_id(self, calendar_id: str) -> bool:
+        res = self._connection.execute(
+            f"SELECT EXISTS (SELECT 1 FROM {_JOIN} WHERE calendar_id = ?)",
             (calendar_id,),
         )
-        # Conversion to ISO format does not like the Z, that represents UTC aka no time zone
-        # so using +00:00 is an equivalent to it
+        return bool(res.fetchone()[0])
+
+    def get_last_event_date_for_source_id(self, calendar_id: str) -> datetime | None:
+        # Dates are stored with differing UTC offsets, so sort on the instant
+        # they represent rather than on the raw string.
+        res = self._connection.execute(
+            f"""SELECT date FROM {_JOIN} WHERE calendar_id = ?
+                ORDER BY datetime(date) DESC LIMIT 1""",
+            (calendar_id,),
+        )
         fetched = res.fetchone()
         if fetched is None:
             return None
         date_string = fetched[0]
         logger.debug(f"Last date found for calendar ID {calendar_id}: {date_string}")
-        return datetime.fromisoformat(date_string)
+        # Python < 3.11 cannot parse a trailing "Z", but "+00:00" is equivalent.
+        return datetime.fromisoformat(date_string.replace("Z", "+00:00"))
 
-    def entry_already_in_cache(
-        self, db_connection: sqlite3.Connection, date: str, title: str, calendar_id: str
-    ) -> bool:
-        db_cursor = db_connection.cursor()
-        res = db_cursor.execute(
-            f"""SELECT {self.allColumns} FROM {self.uploaded_events_table_name}
-                                INNER JOIN {self.event_source_table_name} ON
-                                {self.uploaded_events_table_name}.id={self.event_source_table_name}.id
-                                WHERE date = ? AND title = ? AND calendar_id = ?""",
+    def entry_already_in_cache(self, date: str, title: str, calendar_id: str) -> bool:
+        res = self._connection.execute(
+            f"""SELECT EXISTS (SELECT 1 FROM {_JOIN}
+                WHERE date = ? AND title = ? AND calendar_id = ?)""",
             (date, title, calendar_id),
         )
-        query = res.fetchall()
-        if len(query) > 0:
-            return True
-        return False
+        return bool(res.fetchone()[0])
