@@ -8,10 +8,12 @@ ENV CACHE_DB_PATH=/app/config
 ## Install Packages ##
 ######################
 
-RUN apt-get update
-RUN apt-get -y install software-properties-common
-RUN add-apt-repository ppa:deadsnakes/ppa && apt-get update
-RUN apt-get -y install python3
+RUN set -eux; \
+	apt-get update; \
+	apt-get install -y --no-install-recommends python3 gosu; \
+	rm -rf /var/lib/apt/lists/*; \
+# verify that the binary works
+	gosu nobody true
 COPY --from=ghcr.io/astral-sh/uv:0.12.21 /uv /usr/local/bin/uv
 
 ##################
@@ -45,17 +47,11 @@ RUN mkdir /app/config
 VOLUME /app/config
 
 
-######################################
-## Copy Entrypoint and Install GoSu ##
-######################################
+######################
+## Copy Entrypoint ##
+######################
 
 USER root
 ADD ./docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod u=rx,g=r,o=r /app/entrypoint.sh
-RUN set -eux; \
-	apt-get update; \
-	apt-get install -y gosu; \
-	rm -rf /var/lib/apt/lists/*; \
-# verify that the binary works
-	gosu nobody true
 ENTRYPOINT ["/app/entrypoint.sh"]

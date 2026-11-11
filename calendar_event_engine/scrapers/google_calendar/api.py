@@ -64,8 +64,8 @@ class GCalAPI:
                 # When refreshed authentication token needs to be re-written, and if authenticating for the first time it needs to be just written
                 with open(token_path, "w") as tokenFile:
                     tokenFile.write(credentialTokens.to_json())
-            except Exception:
-                raise ExpiredToken
+            except Exception as err:
+                raise ExpiredToken from err
         self._apiClient = build("calendar", "v3", credentials=credentialTokens)
         logger.info("Logged in Google Cal Browser")
 

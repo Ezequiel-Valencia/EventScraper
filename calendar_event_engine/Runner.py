@@ -1,5 +1,7 @@
 import datetime
 import os
+import signal
+import sys
 import time
 
 from slack_sdk.webhook import WebhookClient
@@ -201,6 +203,10 @@ def start_event_engine(
 
 
 if __name__ == "__main__":
+    # As PID 1 in a container, SIGTERM is ignored unless handled. Exiting via
+    # SystemExit lets the `with` block below close the cache DB cleanly.
+    signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+
     slack_webhook_url = os.environ.get("SLACK_WEBHOOK")
     env_webhook = (
         None if slack_webhook_url is None else WebhookClient(slack_webhook_url)
