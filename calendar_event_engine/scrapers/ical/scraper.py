@@ -81,7 +81,7 @@ def _hydrate_event_template(
     week_from_now = now + timedelta(days=7)
     include_all_dates = os.getenv("TEST") == "True"
     events = []
-    for event in calendar.walk("VEVENT"):
+    for event in calendar.events:
         start = event.start
         if not isinstance(start, datetime):
             start = datetime.combine(start, datetime.min.time(), timezone.utc)

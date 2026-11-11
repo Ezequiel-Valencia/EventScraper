@@ -7,6 +7,7 @@ mirrors its behaviour (including which errors it raises) on top of httpx2.
 from typing import Any
 
 import httpx2
+from gql import GraphQLRequest
 from gql.transport import Transport
 from gql.transport.exceptions import (
     TransportAlreadyConnected,
@@ -14,7 +15,7 @@ from gql.transport.exceptions import (
     TransportProtocolError,
     TransportServerError,
 )
-from graphql import DocumentNode, ExecutionResult, print_ast
+from graphql import ExecutionResult
 
 
 class HTTPX2Transport(Transport):
@@ -38,23 +39,18 @@ class HTTPX2Transport(Transport):
             self._client.close()
             self._client = None
 
-    def execute(  # type: ignore[override]
+    def execute(
         self,
-        document: DocumentNode,
-        variable_values: dict[str, Any] | None = None,
-        operation_name: str | None = None,
+        request: GraphQLRequest,
+        *args: Any,
         **kwargs: Any,
     ) -> ExecutionResult:
         if self._client is None:
             raise TransportClosed("Transport is not connected")
 
-        payload: dict[str, Any] = {"query": print_ast(document)}
-        if variable_values:
-            payload["variables"] = variable_values
-        if operation_name:
-            payload["operationName"] = operation_name
-
-        response = self._client.post(self.url, json=payload, headers=self.headers)
+        response = self._client.post(
+            self.url, json=request.payload, headers=self.headers
+        )
 
         try:
             result = response.json()

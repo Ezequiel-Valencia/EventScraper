@@ -6,8 +6,7 @@ cannot break (or inject into) a request.
 Schema: https://github.com/framasoft/mobilizon/tree/main/lib/graphql/schema
 """
 
-from gql import gql
-from graphql import DocumentNode
+from gql import GraphQLRequest, gql
 
 # Argument types of the createEvent mutation, keyed by MobilizonEvent field.
 _CREATE_EVENT_ARG_TYPES = {
@@ -28,7 +27,7 @@ _CREATE_EVENT_ARG_TYPES = {
 }
 
 
-def create_event(variables: dict) -> DocumentNode:
+def create_event(variables: dict) -> GraphQLRequest:
     """Only declares the variables actually provided, so omitted arguments
     fall back to Mobilizon's defaults instead of being sent as null."""
     declarations = ", ".join(f"${k}: {_CREATE_EVENT_ARG_TYPES[k]}" for k in variables)

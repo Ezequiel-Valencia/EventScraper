@@ -1,13 +1,12 @@
 import json
 
 import httpx2
-from gql import Client
+from gql import Client, GraphQLRequest
 from gql.transport.exceptions import (
     TransportProtocolError,
     TransportQueryError,
     TransportServerError,
 )
-from graphql import DocumentNode
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -54,6 +53,8 @@ class MobilizonAPI:
                 endpoint, headers=self._headers, timeout=TIMEOUT_SECONDS
             ),
             fetch_schema_from_transport=True,
+            # Mobilizon's schema does not support deprecation info on input values.
+            introspection_args={"input_value_deprecation": False},
         )
         self._login()
         self.bot_actor = Actor(**self.get_actors()["identities"][0])
@@ -66,21 +67,21 @@ class MobilizonAPI:
         self._headers["Authorization"] = f"Bearer {login['accessToken']}"
 
     @_retry_transient
-    def _execute_once(self, document: DocumentNode, variables: dict | None) -> dict:
-        return self._client.execute(document, variable_values=variables)
+    def _execute_once(self, request: GraphQLRequest, variables: dict | None) -> dict:
+        return self._client.execute(GraphQLRequest(request, variable_values=variables))
 
     def _execute(
-        self, document: DocumentNode, variables: dict | None = None, relogin=True
+        self, request: GraphQLRequest, variables: dict | None = None, relogin=True
     ) -> dict:
         try:
-            return self._execute_once(document, variables)
+            return self._execute_once(request, variables)
         except TransportQueryError as e:
             # Access tokens are short-lived; log back in once and try again.
             if not relogin or not _is_unauthenticated(e):
                 raise
             logger.info("Mobilizon session expired, logging in again")
             self._login()
-            return self._execute_once(document, variables)
+            return self._execute_once(request, variables)
 
     def create_event(self, event: MobilizonEvent) -> dict:
         event.organizerActorId = self.bot_actor.id
