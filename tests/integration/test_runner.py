@@ -5,6 +5,7 @@ from unittest.mock import patch
 from calendar_event_engine.Runner import _runner
 from calendar_event_engine.db.db_cache import SQLiteDB
 from calendar_event_engine.parser.submission import get_runner_submission
+from calendar_event_engine.utils.location import _geocode
 
 
 # TODO: Test the entire runner interaction that it executes
@@ -18,6 +19,9 @@ class TestRunner(unittest.TestCase):
         patcher = patch("calendar_event_engine.utils.location.Nominatim")
         nominatim = patcher.start()
         self.addCleanup(patcher.stop)
+        # Keep stubbed coordinates out of the lookup cache other tests share.
+        _geocode.cache_clear()
+        self.addCleanup(_geocode.cache_clear)
         nominatim.return_value.geocode.return_value = SimpleNamespace(
             latitude=41.6032, longitude=-73.0877
         )
