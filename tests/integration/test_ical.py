@@ -17,6 +17,7 @@ class TestICALScraper(unittest.TestCase):
 
     def test_ical_scraper_correctness(self):
         cache_db = SQLiteDB(True)
+        self.addCleanup(cache_db.close)
         ical_scraper = ICALScraper(cache_db)
         mobilizon_metadata: dict = {
             "mobilizon": {

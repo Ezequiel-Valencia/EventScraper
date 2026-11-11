@@ -59,6 +59,7 @@ class TestEventTable(unittest.TestCase):
 
     def test_GroupInsertionAndRetrieval(self):
         db = SQLiteDB(True)
+        self.addCleanup(db.close)
         self.insertGroup(db, self.group1, self.group1Source)
 
         query = db.select_all_from_upload_table().fetchall()
@@ -88,6 +89,7 @@ class TestEventTable(unittest.TestCase):
 
     def test_RemoveOldEvents(self):
         db = SQLiteDB(True)
+        self.addCleanup(db.close)
 
         self.insertGroup(db, self.group1, self.group1Source)
         self.insertGroup(db, self.group2, self.group2Source)
@@ -114,6 +116,7 @@ class TestEventTable(unittest.TestCase):
 
     def test_IdempotentInsertionsAndCaching(self):
         db = SQLiteDB(True)
+        self.addCleanup(db.close)
 
         self.insertGroup(db, self.group2, self.group2Source)
         query = db.select_all_from_upload_table().fetchall()
@@ -135,6 +138,7 @@ class TestEventTable(unittest.TestCase):
 
     def test_GetLastEvent(self):
         db = SQLiteDB(True)
+        self.addCleanup(db.close)
 
         self.insertGroup(db, self.group2, self.group2Source)
         lastEventUploaded = db.get_last_event_date_for_source_id(self.sourceGroup2)

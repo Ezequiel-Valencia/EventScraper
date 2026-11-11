@@ -242,6 +242,7 @@ if __name__ == "__main__":
         logger.error(err)
         raise err
 
-    start_event_engine(
-        submission_json_path, SQLiteDB(env_test_mode), env_webhook, None, env_test_mode
-    )
+    with SQLiteDB(env_test_mode) as env_cache_db:
+        start_event_engine(
+            submission_json_path, env_cache_db, env_webhook, None, env_test_mode
+        )

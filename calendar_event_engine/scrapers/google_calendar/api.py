@@ -91,11 +91,11 @@ class GCalAPI:
         """
         try:
             # Call the Calendar API, 'Z' indicates UTC time
-            stringDateLastEvent = datetime.utcnow().astimezone().isoformat()
+            stringDateLastEvent = datetime.now().astimezone().isoformat()
             if dateOfLastEventScraped is not None:
                 stringDateLastEvent = dateOfLastEventScraped.isoformat()
             logger.debug(f"Time of last event: {stringDateLastEvent}")
-            weekFromNow = datetime.utcnow().astimezone() + timedelta(days=7)
+            weekFromNow = datetime.now().astimezone() + timedelta(days=7)
             weekFromNowStr = weekFromNow.isoformat()
 
             events_result = (

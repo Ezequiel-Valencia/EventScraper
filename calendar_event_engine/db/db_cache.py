@@ -41,6 +41,12 @@ class SQLiteDB:
     def close(self):
         self.sql_db_connection.close()
 
+    def __enter__(self) -> "SQLiteDB":
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.close()
+
     def delete_all_month_old_events(self):
         self.ue_driver.delete_all_month_old_events(self.sql_db_connection)
 

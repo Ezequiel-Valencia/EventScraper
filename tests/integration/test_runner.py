@@ -1,4 +1,6 @@
 import unittest
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from calendar_event_engine.Runner import _runner
 from calendar_event_engine.db.db_cache import SQLiteDB
@@ -9,8 +11,20 @@ from calendar_event_engine.parser.submission import get_runner_submission
 
 
 class TestRunner(unittest.TestCase):
+    def setUp(self):
+        # Geocoding through the public Nominatim server takes ~4s per address and
+        # made up nearly all of this test's runtime. These tests check what the
+        # runner stores, not coordinates, so answer every lookup with a fixed point.
+        patcher = patch("calendar_event_engine.utils.location.Nominatim")
+        nominatim = patcher.start()
+        self.addCleanup(patcher.stop)
+        nominatim.return_value.geocode.return_value = SimpleNamespace(
+            latitude=41.6032, longitude=-73.0877
+        )
+
     def test_runners_insertions_correctness(self):
         cache_db: SQLiteDB = SQLiteDB(test_mode=True)
+        self.addCleanup(cache_db.close)
         submission = get_runner_submission(
             "https://kernels.ctgrassroots.org/test-json/test-submission.json",
             True,
@@ -50,6 +64,7 @@ class TestRunner(unittest.TestCase):
 
     def test_runners_idempotency_remote_submission(self):
         cache_db: SQLiteDB = SQLiteDB(test_mode=True)
+        self.addCleanup(cache_db.close)
         submission = get_runner_submission(
             "https://kernels.ctgrassroots.org/test-json/test-submission.json",
             True,

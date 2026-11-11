@@ -32,6 +32,7 @@ dev = [
     "pytest-asyncio>=1.0.0,<2",
     "ruff>=0.11.5",
     "types-requests>=2.31.0",
+    "testcontainers"
 ]
 
 [tool.mypy]
@@ -55,6 +56,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 markers = [
     "integration: marks tests that hit live external services (deselect with --mock-only)",
+    "entire_system: full stack tests that run Mobilizon in docker via testcontainers (deselect with -m 'not entire_system' or --mock-only)",
 ]
 
 [build-system]

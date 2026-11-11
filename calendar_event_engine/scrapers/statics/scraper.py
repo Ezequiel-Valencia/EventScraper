@@ -54,7 +54,7 @@ def hydrate_event_template_with_legitimate_times(
     generated_events = []
 
     end_date = datetime.fromisoformat(group_kernel.default_time_info.end_time)
-    now = datetime.utcnow().astimezone()
+    now = datetime.now().astimezone()
 
     if now.date() <= end_date.date():
         for t in times:
