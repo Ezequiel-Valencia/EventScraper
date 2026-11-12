@@ -1,4 +1,3 @@
-import copy
 import os
 from datetime import datetime, timedelta
 
@@ -11,7 +10,11 @@ from googleapiclient.errors import HttpError
 
 from calendar_event_engine.logger import create_logger_from_designated_logger
 from calendar_event_engine.types.generics import GenericAddress, GenericEvent
-from calendar_event_engine.utils.location import find_geolocation_from_address
+from calendar_event_engine.scrapers.common import (
+    ScrapedEvent,
+    hydrate_event_templates,
+    parse_address_string,
+)
 
 logger = create_logger_from_designated_logger(__name__)
 
@@ -116,17 +119,25 @@ class GCalAPI:
                 logger.info(f"No upcoming events for calendarID {calendarId}")
                 return []
 
-            events: list[GenericEvent] = []
-            for googleEvent in googleEvents:
-                _process_google_event(
-                    googleEvent=googleEvent,
-                    eventsToUpload=events,
-                    checkCacheForEvent=checkCacheFunction,
-                    calendarId=calendarId,
-                    eventKernel=eventKernel,
+            scraped = [
+                event
+                for googleEvent in googleEvents
+                if (
+                    event := _to_scraped_event(
+                        googleEvent, eventKernel.physical_address
+                    )
                 )
-
-            return events
+                is not None
+            ]
+            # The API was asked for just the wanted time range already.
+            return hydrate_event_templates(
+                scraped,
+                eventKernel,
+                is_cached=lambda start, title: checkCacheFunction(
+                    start, title, calendarId
+                ),
+                within_scrape_window=False,
+            )
         except HttpError as error:
             logger.error(f"An error occurred: {error}")
             return []
@@ -135,82 +146,24 @@ class GCalAPI:
         self._apiClient.close()
 
 
-def _process_google_event(
-    googleEvent: dict,
-    eventsToUpload: list,
-    checkCacheForEvent,
-    calendarId: str,
-    eventKernel: GenericEvent,
-):
-    starTimeGoogleEvent = googleEvent["start"].get("dateTime")
-    endTimeGooglEvent = googleEvent["end"].get("dateTime")
+def _to_scraped_event(
+    googleEvent: dict, default_address: GenericAddress | None
+) -> ScrapedEvent | None:
+    start = googleEvent["start"].get("dateTime")
+    end = googleEvent["end"].get("dateTime")
     title = googleEvent.get("summary")
     description = googleEvent.get("description")
-
-    if (
-        starTimeGoogleEvent is not None
-        and endTimeGooglEvent is not None
-        and title is not None
-        and description is not None
-    ):
-        startDateTime = datetime.fromisoformat(
-            starTimeGoogleEvent.replace("Z", "+00:00")
-        ).astimezone()
-        endDateTime = datetime.fromisoformat(
-            endTimeGooglEvent.replace("Z", "+00:00")
-        ).astimezone()
-        if not checkCacheForEvent(startDateTime.isoformat(), title, calendarId):
-            eventKernel = copy.deepcopy(eventKernel)
-            eventAddress, default_location_notif = find_geolocation_from_address(
-                parse_google_location(
-                    googleEvent.get("location"), eventKernel.physical_address
-                ),
-                eventKernel.physical_address,
-                title,
-            )
-            eventKernel.begins_on = startDateTime.isoformat()
-            eventKernel.ends_on = endDateTime.isoformat()
-            eventKernel.physical_address = eventAddress
-            eventKernel.title = title
-            eventKernel.description = f"Automatically scraped by Event Bot {default_location_notif}: \n\n{str(description)}"
-            eventsToUpload.append(eventKernel)
-
-
-def parse_google_location(
-    location: str | None, default_location: GenericAddress | None
-) -> GenericAddress | None:
-    if location is None:
-        logger.debug("No location provided, using default")
-        return default_location
-    tokens = location.split(",")
-    address: GenericAddress
-    match len(tokens):
-        case 1:
-            return default_location
-        case 2:
-            return default_location
-        case 3:
-            address = GenericAddress(
-                locality=tokens[0], postalCode=tokens[1], street="", country=tokens[2]
-            )
-        case 4:
-            address = GenericAddress(
-                locality=tokens[1],
-                postalCode=tokens[2],
-                street=tokens[0],
-                country=tokens[3],
-            )
-        case 5:
-            address = GenericAddress(
-                locality=tokens[2],
-                postalCode=tokens[3],
-                street=tokens[1],
-                country=tokens[4],
-            )
-        case _:
-            return default_location
-
-    return address
+    if start is None or end is None or title is None or description is None:
+        return None
+    return ScrapedEvent(
+        title=title,
+        start=datetime.fromisoformat(start.replace("Z", "+00:00")).astimezone(),
+        end=datetime.fromisoformat(end.replace("Z", "+00:00")).astimezone(),
+        description=str(description),
+        # Unparseable or missing locations fall back to the default, flagged as unverified.
+        address_to_geocode=parse_address_string(googleEvent.get("location"))
+        or default_address,
+    )
 
 
 if __name__ == "__main__":

@@ -8,6 +8,8 @@ class ScraperTypes(Enum):
     STATIC = "JSON"
     GOOGLE_CAL = "Google Calendar"
     ICAL = "ICAL"
+    RSS = "RSS"
+    JSON_LD = "JSON-LD"
     CUSTOM = "CUSTOM"
 
 

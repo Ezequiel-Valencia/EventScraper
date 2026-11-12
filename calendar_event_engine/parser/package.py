@@ -15,6 +15,8 @@ _SCRAPER_TYPES_BY_NAME: dict[str, ScraperTypes] = {
     "STATIC": ScraperTypes.STATIC,
     "GOOGLE_CAL": ScraperTypes.GOOGLE_CAL,
     "ICAL": ScraperTypes.ICAL,
+    "RSS": ScraperTypes.RSS,
+    "JSON_LD": ScraperTypes.JSON_LD,
     "CUSTOM": ScraperTypes.CUSTOM,
 }
 

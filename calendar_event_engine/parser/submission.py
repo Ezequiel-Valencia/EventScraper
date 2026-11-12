@@ -10,6 +10,8 @@ from calendar_event_engine.publishers.mobilizon.uploader import MobilizonUploade
 from calendar_event_engine.scrapers.abc_scraper import Scraper
 from calendar_event_engine.scrapers.google_calendar.scraper import GoogleCalendarScraper
 from calendar_event_engine.scrapers.ical.scraper import ICALScraper
+from calendar_event_engine.scrapers.json_ld.scraper import JSONLDScraper
+from calendar_event_engine.scrapers.rss.scraper import RSSScraper
 from calendar_event_engine.scrapers.statics.scraper import StaticScraper
 from calendar_event_engine.types.submission import (
     PublisherTypes,
@@ -64,5 +66,9 @@ def get_runner_submission(
                             respective_scrapers[scraper_type] = StaticScraper()
                         case ScraperTypes.ICAL:
                             respective_scrapers[scraper_type] = ICALScraper(cache_db)
+                        case ScraperTypes.RSS:
+                            respective_scrapers[scraper_type] = RSSScraper(cache_db)
+                        case ScraperTypes.JSON_LD:
+                            respective_scrapers[scraper_type] = JSONLDScraper(cache_db)
 
     return RunnerSubmission(cache_db, publisher_package, test_mode, respective_scrapers)
