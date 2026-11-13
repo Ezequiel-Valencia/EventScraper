@@ -1,4 +1,5 @@
 import json
+import logging
 
 import httpx2
 from gql import Client, GraphQLRequest
@@ -9,9 +10,12 @@ from gql.transport.exceptions import (
 )
 from tenacity import (
     retry,
+    before_sleep_log,
+    retry_if_exception,
     retry_if_exception_type,
     stop_after_attempt,
     wait_exponential,
+    wait_fixed,
 )
 
 from calendar_event_engine.logger import create_logger_from_designated_logger
@@ -33,6 +37,32 @@ _retry_transient = retry(
     ),
     stop=stop_after_attempt(4),
     wait=wait_exponential(multiplier=2),  # waits 2s, 4s, 8s
+)
+
+# Mobilizon's rate limiter (Hammer) counts requests per minute, and the per-IP
+# counter is shared by login, createEvent and uploadMedia. When it trips, wait
+# out the window and try again instead of dropping the event.
+RATE_LIMIT_WAIT_SECONDS = 60
+RATE_LIMIT_ATTEMPTS = 5
+
+
+def _is_rate_limited(error: BaseException) -> bool:
+    if isinstance(error, TransportServerError) and error.code == 429:
+        return True
+    if isinstance(error, httpx2.HTTPStatusError) and error.response.status_code == 429:
+        return True
+    if isinstance(error, TransportQueryError):
+        message = str(error).lower()
+        return "too many requests" in message or "too_many_requests" in message
+    return False
+
+
+_retry_rate_limited = retry(
+    reraise=True,
+    retry=retry_if_exception(_is_rate_limited),
+    stop=stop_after_attempt(RATE_LIMIT_ATTEMPTS),
+    wait=wait_fixed(RATE_LIMIT_WAIT_SECONDS),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
 )
 
 
@@ -66,6 +96,7 @@ class MobilizonAPI:
         self._refresh_token: str = login["refreshToken"]
         self._headers["Authorization"] = f"Bearer {login['accessToken']}"
 
+    @_retry_rate_limited
     @_retry_transient
     def _execute_once(self, request: GraphQLRequest, variables: dict | None) -> dict:
         return self._client.execute(GraphQLRequest(request, variable_values=variables))
@@ -105,6 +136,7 @@ class MobilizonAPI:
             logger.warning(f"Unable to upload picture {file_url}: {e}")
             return None
 
+    @_retry_rate_limited
     @_retry_transient
     def _upload_file(self, file_url: str) -> str:
         with httpx2.Client(timeout=TIMEOUT_SECONDS, follow_redirects=True) as http:
