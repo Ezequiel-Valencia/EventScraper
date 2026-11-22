@@ -39,6 +39,11 @@ class TestGetGroupPackageMocked(unittest.TestCase):
         self.assertEqual(
             1, kernels[0].event_template.publisher_specific_info["mobilizon"]["groupID"]
         )
+        # Keys the parser doesn't use are kept for the caller.
+        self.assertEqual(
+            {"family_friendly": False, "notes": {"contact": "someone"}},
+            kernels[0].source_info,
+        )
 
     def test_network_error_raises_runtime_error(self):
         with patch(

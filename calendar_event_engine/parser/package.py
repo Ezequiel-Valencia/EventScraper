@@ -21,6 +21,26 @@ _SCRAPER_TYPES_BY_NAME: dict[str, ScraperTypes] = {
 }
 
 
+# Keys of a `groupKernels` entry that the parser reads itself. Any other key is
+# kept, untouched, in GroupEventsKernel.source_info.
+_KERNEL_KEYS_USED_BY_PARSER = frozenset(
+    {
+        "calendarIDs",
+        "calendarType",
+        "publisherInfo",
+        "title",
+        "beginsOn",
+        "endsOn",
+        "defaultDescription",
+        "onlineAddress",
+        "phoneAddress",
+        "defaultLocation",
+        "defaultTimes",
+        "endDate",
+    }
+)
+
+
 def retrieve_source_type(source_type_string: str) -> ScraperTypes:
     try:
         return _SCRAPER_TYPES_BY_NAME[source_type_string]
@@ -78,6 +98,11 @@ def get_group_package(json_path: str) -> GroupPackage:
                 scraper_type=scraper_type,
                 json_source_url=json_path,
                 default_time_info=time_info,
+                source_info={
+                    key: value
+                    for key, value in group_info.items()
+                    if key not in _KERNEL_KEYS_USED_BY_PARSER
+                },
             )
         )
 

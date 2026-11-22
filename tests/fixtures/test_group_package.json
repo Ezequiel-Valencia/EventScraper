@@ -3,6 +3,10 @@
   "description": "A test package",
   "groupKernels": {
     "Test Group": {
+      "family_friendly": false,
+      "notes": {
+        "contact": "someone"
+      },
       "publisherInfo": {
         "mobilizon": {
           "groupID": 1,

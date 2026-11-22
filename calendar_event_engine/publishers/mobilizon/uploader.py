@@ -21,12 +21,32 @@ logger = create_logger_from_designated_logger(__name__)
 
 
 class MobilizonUploader(Publisher):
+    """
+    Publishes events to a Mobilizon instance.
+
+    Args:
+        endpoint: GraphQL endpoint of the instance. Defaults to MOBILIZON_ENDPOINT.
+        email: Login email. Defaults to MOBILIZON_EMAIL, then MOBILIZON_LOGIN_FILE.
+        password: Login password. Defaults to MOBILIZON_PASSWORD, then
+            MOBILIZON_LOGIN_FILE.
+    """
+
     mobilizonAPI: MobilizonAPI | None
     cache_db: SQLiteDB
 
-    def __init__(self, test_mode: bool, cache_db: SQLiteDB):
+    def __init__(
+        self,
+        test_mode: bool,
+        cache_db: SQLiteDB,
+        endpoint: str | None = None,
+        email: str | None = None,
+        password: str | None = None,
+    ):
         super().__init__(cache_db, logger)
         self.testMode = test_mode
+        self.endpoint = endpoint
+        self.email = email
+        self.password = password
         self.mobilizonAPI = None
         self._fake_uuid_for_tests = 0
 
@@ -97,9 +117,19 @@ class MobilizonUploader(Publisher):
     def connect(self):
         if self.testMode:
             return
-        endpoint = os.environ["MOBILIZON_ENDPOINT"]
-        email = os.environ.get("MOBILIZON_EMAIL")
-        passwd = os.environ.get("MOBILIZON_PASSWORD")
+        endpoint = (
+            self.endpoint
+            if self.endpoint is not None
+            else os.environ["MOBILIZON_ENDPOINT"]
+        )
+        email = (
+            self.email if self.email is not None else os.environ.get("MOBILIZON_EMAIL")
+        )
+        passwd = (
+            self.password
+            if self.password is not None
+            else os.environ.get("MOBILIZON_PASSWORD")
+        )
         if email is None or passwd is None:
             with open(os.environ["MOBILIZON_LOGIN_FILE"], "r") as f:
                 secrets = json.load(f)

@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -35,6 +36,11 @@ class GroupEventsKernel:
     """
     All the information required to scrape a groups' information.
     An individual group can have multiple calendars.
+
+    Args:
+        source_info: Every key of the group's JSON entry that the engine does not
+            use itself (e.g. ``{"family_friendly": False}``). Callers can read it,
+            for instance in an ``EventRouter``.
     """
 
     event_template: GenericEvent
@@ -43,6 +49,7 @@ class GroupEventsKernel:
     scraper_type: ScraperTypes
     json_source_url: str
     default_time_info: TimeInfo | None = field(default=None, compare=False)
+    source_info: dict = field(default_factory=dict, compare=False)
 
 
 @dataclass
@@ -70,3 +77,10 @@ class AllEventsFromAGroup:
     events: list[GenericEvent]
     event_kernel: GroupEventsKernel
     calendar_id: str
+
+
+EventRouter = Callable[[GenericEvent, GroupEventsKernel], str | None]
+"""
+Chooses where an event is published: returns the name of a publisher (a key of the
+``publishers`` given to ``start_event_engine``), or None to skip the event.
+"""
