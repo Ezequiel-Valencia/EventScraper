@@ -36,11 +36,29 @@ def test_parse_datetime_unknown_timezone_falls_back_to_utc():
 @pytest.mark.parametrize(
     "value, street, locality, region, postal",
     [
-        ("Venue, 350 Asylum St, Hartford, CT 06103", "350 Asylum St", "Hartford", "CT", "06103"),
-        ("350 Asylum St, Hartford, CT, 06103, USA", "350 Asylum St", "Hartford", "CT", "06103"),
+        (
+            "Venue, 350 Asylum St, Hartford, CT 06103",
+            "350 Asylum St",
+            "Hartford",
+            "CT",
+            "06103",
+        ),
+        (
+            "350 Asylum St, Hartford, CT, 06103, USA",
+            "350 Asylum St",
+            "Hartford",
+            "CT",
+            "06103",
+        ),
         ("350 Asylum St, Hartford", "350 Asylum St", "Hartford", None, None),
         # Formerly the ICAL scraper's own location test.
-        ("Venue, 123 Main St, Springfield, IL, 62701", "123 Main St", "Springfield", "IL", "62701"),
+        (
+            "Venue, 123 Main St, Springfield, IL, 62701",
+            "123 Main St",
+            "Springfield",
+            "IL",
+            "62701",
+        ),
     ],
 )
 def test_parse_address_string(value, street, locality, region, postal):

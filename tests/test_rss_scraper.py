@@ -8,7 +8,6 @@ from tests.scraper_fixtures import (  # noqa: F401  (pytest fixtures)
     NEXT_MONTH,
     TOMORROW,
     YESTERDAY,
-    geocode_calls,
     make_template,
     scrape_window_enforced,
 )
@@ -148,14 +147,19 @@ def test_rss1_rdf_feed(geocode_calls):
 
 
 def test_scraper_fetches_each_feed(local_http_server, cache_db, geocode_calls):
-    url = local_http_server.add_file(
-        "events.rss", _rss2(_ev_item("Served", TOMORROW))
-    )
-    kernel = GroupEventsKernel(
-        make_template(), "Group", [url], ScraperTypes.RSS, ""
-    )
+    url = local_http_server.add_file("events.rss", _rss2(_ev_item("Served", TOMORROW)))
+    kernel = GroupEventsKernel(make_template(), "Group", [url], ScraperTypes.RSS, "")
 
     [result] = RSSScraper(cache_db).retrieve_from_source(kernel)
 
     assert result.calendar_id == url
     assert [e.title for e in result.events] == ["Served"]
+
+
+def test_source_id_is_the_guid_else_the_link(geocode_calls):
+    feed = _rss2(
+        _ev_item("With guid", TOMORROW, extra="<guid>post-7</guid>")
+        + _ev_item("Without guid", TOMORROW)
+    )
+    ids = [e.source_event_id for e in parse_feed(feed, make_template())]
+    assert ids == ["post-7", "https://example.com/Without-guid"]

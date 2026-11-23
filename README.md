@@ -102,3 +102,23 @@ How it behaves:
 - With a single publisher, `route_event` is optional. With several, it is
   required (the engine raises `ValueError` at startup otherwise).
 - Without `publishers` or `route_event`, everything works as before.
+- Each cached event records the site it was published to: the publisher's name
+  in `publishers` (e.g. `"ctgrassroots"`), otherwise `MobilizonUploader`'s
+  `site_name` argument, or by default its endpoint's host name.
+
+## Updating Changed Events
+
+Every scrape compares each upcoming event with the version that was published:
+new events are created, events that changed (title, time, description, location,
+picture, ...) are updated in place on the site they were published to, and
+unchanged events are skipped.
+
+An event is recognised by the ID its source gives it (iCal `UID`, Google Calendar
+event ID, RSS `guid`, JSON-LD `@id` or `url`), so a renamed or rescheduled event is
+updated rather than published again. Events without such an ID (static and most
+custom scrapers, unless they set `GenericEvent.source_event_id`) are recognised by
+their title and start time, so only their other details can be updated.
+
+A cache created by an older version is upgraded when it is opened. Its events are
+not republished: the first scrape records their current version, and later
+changes are updated.

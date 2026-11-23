@@ -50,7 +50,7 @@ def _publish(
     publisher: Publisher, events: list[AllEventsFromAGroup], name: str | None = None
 ) -> None:
     try:
-        publisher.upload(events)
+        publisher.upload(events, site=name)
     except Exception as err:
         label = name if name is not None else publisher.__class__.__name__
         msg = f"The publisher {label} was unable to upload events."

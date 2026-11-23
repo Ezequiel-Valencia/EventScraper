@@ -1,17 +1,21 @@
 import sqlite3
 from dataclasses import dataclass
 
+from calendar_event_engine.db.migrations import add_missing_columns
+
 
 @dataclass
 class UploadedEventRow:
     """
     Args:
         uuid: The publishers UUID for the event uploaded
-        user_id: The publishers id of the user who uploaded this event
+        user_id: The publishers ID for the event uploaded (used to update it)
         title: Title of the event
         date: ISO 8601 start time, e.g. 2025-05-25T10:00:00-04:00
         group_id: The publishers ID for the group affiliated with this event
         group_name: Name of the group affiliated with this event
+        site: The site the event was published to, e.g. "ctgrassroots"
+        content_hash: Fingerprint of the event as published, to notice changes
     """
 
     uuid: str
@@ -20,6 +24,8 @@ class UploadedEventRow:
     date: str
     group_id: int
     group_name: str
+    site: str | None = None
+    content_hash: str | None = None
 
 
 class UploadedEventsDriver:
@@ -30,6 +36,12 @@ class UploadedEventsDriver:
         db_connection.execute(f"""CREATE TABLE IF NOT EXISTS {self.uploaded_events_table_name}
                                   (id INTEGER PRIMARY KEY, uuid text, user_id text,
                                   title text, date DATE, group_id integer, group_name text)""")
+        with db_connection:
+            add_missing_columns(
+                db_connection,
+                self.uploaded_events_table_name,
+                {"site": "TEXT", "content_hash": "TEXT", "updated_at": "TEXT"},
+            )
 
     def delete_all_month_old_events(self) -> None:
         # https://www.sqlite.org/lang_datefunc.html
@@ -50,8 +62,9 @@ class UploadedEventsDriver:
         Does not commit; the caller owns the transaction.
         """
         db_cursor = self._connection.execute(
-            f"INSERT INTO {self.uploaded_events_table_name} (uuid, user_id, title, date, group_id, group_name) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
+            f"INSERT INTO {self.uploaded_events_table_name} "
+            "(uuid, user_id, title, date, group_id, group_name, site, content_hash) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 row_to_add.uuid,
                 row_to_add.user_id,
@@ -59,8 +72,34 @@ class UploadedEventsDriver:
                 row_to_add.date,
                 row_to_add.group_id,
                 row_to_add.group_name,
+                row_to_add.site,
+                row_to_add.content_hash,
             ),
         )
         primary_key = db_cursor.lastrowid
         assert primary_key is not None
         return primary_key
+
+    def update_cached_event(
+        self,
+        row_id: int,
+        title: str,
+        date: str,
+        site: str,
+        content_hash: str,
+        republished: bool,
+    ) -> None:
+        """
+        Record the latest version of an already published event.
+        Does not commit; the caller owns the transaction.
+
+        :param republished: Whether the publisher was sent the new version, rather
+            than the row only being filled in (e.g. a row from an older cache).
+        """
+        self._connection.execute(
+            f"""UPDATE {self.uploaded_events_table_name}
+                SET title = ?, date = ?, site = ?, content_hash = ?,
+                    updated_at = CASE WHEN ? THEN datetime('now') ELSE updated_at END
+                WHERE id = ?""",
+            (title, date, site, content_hash, republished, row_id),
+        )

@@ -37,6 +37,17 @@ def create_event(variables: dict) -> GraphQLRequest:
     )
 
 
+def update_event(variables: dict) -> GraphQLRequest:
+    """Like `create_event`, for the updateEvent mutation. `variables` must hold
+    "eventId"; arguments left out keep their current value."""
+    arg_types = {**_CREATE_EVENT_ARG_TYPES, "eventId": "ID!"}
+    declarations = ", ".join(f"${k}: {arg_types[k]}" for k in variables)
+    arguments = ", ".join(f"{k}: ${k}" for k in variables)
+    return gql(
+        f"mutation UpdateEvent({declarations}) {{ updateEvent({arguments}) {{ id uuid }} }}"
+    )
+
+
 DELETE_EVENT = gql(
     "mutation DeleteEvent($eventId: ID!) { deleteEvent(eventId: $eventId) { id } }"
 )

@@ -32,15 +32,11 @@ class GoogleCalendarScraper(Scraper):
     def _get_specific_calendar_events(
         self, google_calendar_id, group_kernel: GroupEventsKernel
     ):
-        last_uploaded_event_date = self.cache_db.get_last_event_date_for_source_id(
-            google_calendar_id
-        )
-
+        # Every upcoming event is fetched, including published ones, so that the
+        # publisher can update those that changed.
         events: list[GenericEvent] = self.google_calendar_api.getAllEventsAWeekFromNow(
             calendarId=google_calendar_id,
             eventKernel=group_kernel.event_template,
-            checkCacheFunction=self.cache_db.entry_already_in_cache,
-            dateOfLastEventScraped=last_uploaded_event_date,
         )
 
         return events

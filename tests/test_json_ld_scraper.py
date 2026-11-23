@@ -12,7 +12,6 @@ from tests.scraper_fixtures import (  # noqa: F401  (pytest fixtures)
     NEXT_MONTH,
     TOMORROW,
     YESTERDAY,
-    geocode_calls,
     make_template,
     scrape_window_enforced,
 )
@@ -92,7 +91,11 @@ def test_coordinates_on_the_page_skip_geocoding(geocode_calls):
             location={
                 "@type": "Place",
                 "address": "5 Elm St, Hartford, CT 06103",
-                "geo": {"@type": "GeoCoordinates", "latitude": "41.5", "longitude": -72.5},
+                "geo": {
+                    "@type": "GeoCoordinates",
+                    "latitude": "41.5",
+                    "longitude": -72.5,
+                },
             },
         )
     )
@@ -140,7 +143,9 @@ def test_cancelled_and_postponed_events_are_skipped(geocode_calls):
                 eventStatus="https://schema.org/EventCancelled",
             ),
             _event("Postponed", TOMORROW, eventStatus="EventPostponed"),
-            _event("Scheduled", TOMORROW, eventStatus="https://schema.org/EventScheduled"),
+            _event(
+                "Scheduled", TOMORROW, eventStatus="https://schema.org/EventScheduled"
+            ),
         ]
     )
     titles = [e.title for e in parse_page(page, make_template(), PAGE_URL)]
@@ -211,3 +216,20 @@ def test_scraper_fetches_each_page(local_http_server, cache_db, geocode_calls):
     assert result.calendar_id == url
     assert [e.title for e in result.events] == ["Served"]
     assert result.events[0].online_address == url
+
+
+def test_source_id_is_the_id_else_the_event_url_not_the_page(geocode_calls):
+    page = _page(
+        [
+            _event("With id", TOMORROW, **{"@id": "https://venue.example/#e1"}),
+            _event("With url", TOMORROW, url="https://venue.example/e2"),
+            _event("Neither", TOMORROW),
+        ]
+    )
+    events = parse_page(page, make_template(), PAGE_URL)
+    assert [e.source_event_id for e in events] == [
+        "https://venue.example/#e1",
+        "https://venue.example/e2",
+        None,
+    ]
+    assert events[2].online_address == PAGE_URL

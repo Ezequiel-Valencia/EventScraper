@@ -8,7 +8,7 @@ from collections.abc import Iterator
 import pytest
 
 from calendar_event_engine.db.db_cache import SQLiteDB
-from tests.helpers import PNG_BYTES, LocalHTTPServer
+from tests.helpers import GEOCODED, PNG_BYTES, LocalHTTPServer
 
 
 @pytest.fixture(scope="session")
@@ -32,6 +32,19 @@ def cache_db() -> Iterator[SQLiteDB]:
     """An in-memory cache DB that is closed when the test finishes."""
     with SQLiteDB(test_mode=True) as db:
         yield db
+
+
+@pytest.fixture
+def geocode_calls(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Stub Nominatim, recording each query sent to it."""
+    calls: list[str] = []
+
+    def fake_geocode(query: str):
+        calls.append(query)
+        return GEOCODED
+
+    monkeypatch.setattr("calendar_event_engine.utils.location._geocode", fake_geocode)
+    return calls
 
 
 @pytest.fixture(scope="session")

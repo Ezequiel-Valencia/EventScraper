@@ -12,7 +12,6 @@ from tests.scraper_fixtures import (  # noqa: F401  (pytest fixtures)
     NEXT_MONTH,
     TOMORROW,
     YESTERDAY,
-    geocode_calls,
     make_template,
     scrape_window_enforced,
 )
@@ -55,7 +54,10 @@ def test_ical_event(geocode_calls):
     assert event.online_address == "https://example.com/jazz"
     assert event.picture == "https://example.com/jazz.png"
     assert event.physical_address.street == "350 Asylum St"
-    assert (event.physical_address.latitude, event.physical_address.longitude) == GEOCODED
+    assert (
+        event.physical_address.latitude,
+        event.physical_address.longitude,
+    ) == GEOCODED
 
 
 def test_ical_skips_unconfirmed_out_of_window_and_cached(geocode_calls):
@@ -150,7 +152,12 @@ def test_google_event(geocode_calls):
 
 
 def test_google_skips_incomplete_and_cached_but_not_past(geocode_calls):
-    all_day = {"summary": "All day", "description": "x", "start": {"date": "2026-11-14"}, "end": {"date": "2026-11-15"}}
+    all_day = {
+        "summary": "All day",
+        "description": "x",
+        "start": {"date": "2026-11-14"},
+        "end": {"date": "2026-11-15"},
+    }
     no_description = _google_event("No description", TOMORROW)
     del no_description["description"]
     events = _google_events(
@@ -165,3 +172,23 @@ def test_google_skips_incomplete_and_cached_but_not_past(geocode_calls):
     )
     assert [e.title for e in events] == ["Since last scrape"]
     assert "unverified location" in events[0].description
+
+
+def test_ical_source_id_is_the_uid_and_occurrence(geocode_calls):
+    plain = _ical_event("Plain", TOMORROW, UID="uid-1")
+    moved = _ical_event("Moved", TOMORROW, UID="uid-2")
+    moved.add("RECURRENCE-ID", TOMORROW - timedelta(days=7))
+    without_uid = _ical_event("No UID", TOMORROW)
+    events = _hydrate_event_template(
+        _calendar(plain, moved, without_uid), make_template()
+    )
+    assert [e.source_event_id for e in events] == [
+        "uid-1",
+        f"uid-2#{(TOMORROW - timedelta(days=7)).isoformat()}",
+        None,
+    ]
+
+
+def test_google_source_id_is_the_event_id(geocode_calls):
+    [event] = _google_events([_google_event("Show", TOMORROW, id="abc_20261123")])
+    assert event.source_event_id == "abc_20261123"

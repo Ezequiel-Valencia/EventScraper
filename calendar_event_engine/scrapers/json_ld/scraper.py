@@ -8,7 +8,6 @@ source for groups that don't offer a calendar feed.
 Each calendar ID is the URL of a page listing (or describing) events.
 """
 
-import functools
 import html
 import json
 from collections.abc import Callable, Iterator
@@ -62,12 +61,7 @@ class JSONLDScraper(Scraper):
         all_events: list[AllEventsFromAGroup] = []
         for page_url in event_kernel.calendar_ids:
             events = parse_page(
-                fetch_text(page_url),
-                event_kernel.event_template,
-                page_url=page_url,
-                is_cached=functools.partial(
-                    self.cache_db.entry_already_in_cache, source_id=page_url
-                ),
+                fetch_text(page_url), event_kernel.event_template, page_url=page_url
             )
             all_events.append(AllEventsFromAGroup(events, event_kernel, page_url))
         return all_events
@@ -254,10 +248,10 @@ def _parse_event(node: dict, tz: str, page_url: str | None) -> ScrapedEvent | No
         start=start,
         end=parse_datetime(_string(node.get("endDate")), tz),
         description=_string(node.get("description")) or "",
-        url=_url(node.get("url"))
-        or _virtual_url(node.get("location"))
-        or page_url,
+        url=_url(node.get("url")) or _virtual_url(node.get("location")) or page_url,
         picture=_url(node.get("image")),
         resolved_address=address if geolocated else None,
         address_to_geocode=None if geolocated else address,
+        # Not the page URL: a page usually lists several events.
+        source_id=_string(node.get("@id")) or _url(node.get("url")),
     )

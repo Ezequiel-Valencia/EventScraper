@@ -1,6 +1,7 @@
 import sqlite3
 from dataclasses import dataclass
 
+from calendar_event_engine.db.migrations import add_missing_columns
 from calendar_event_engine.db.uploaded_events_driver import UploadedEventsDriver
 
 
@@ -12,12 +13,15 @@ class EventSource:
         website_url: The events website of origin
         calendar_id: The calendar where the event was sourced from
         source_type: Source type
+        source_event_id: The source's own ID for the event (e.g. an iCal UID),
+            which stays the same when the event's title or time change
     """
 
     uuid: str
     website_url: str
     calendar_id: str
     source_type: str
+    source_event_id: str | None = None
 
 
 class EventSourceDriver:
@@ -30,6 +34,11 @@ class EventSourceDriver:
             db_connection.execute(f"""CREATE TABLE IF NOT EXISTS {self.event_source_table_name}
                                       (id INTEGER, uuid text, websiteURL text, calendar_id text, sourceType text,
                                       FOREIGN KEY (id) REFERENCES {uploaded}(id) ON DELETE CASCADE)""")
+            add_missing_columns(
+                db_connection,
+                self.event_source_table_name,
+                {"source_event_id": "TEXT"},
+            )
             # Every cache lookup filters on calendar_id and joins on id.
             db_connection.execute(
                 f"CREATE INDEX IF NOT EXISTS idx_{self.event_source_table_name}_calendar_id "
@@ -38,6 +47,10 @@ class EventSourceDriver:
             db_connection.execute(
                 f"CREATE INDEX IF NOT EXISTS idx_{self.event_source_table_name}_id "
                 f"ON {self.event_source_table_name} (id)"
+            )
+            db_connection.execute(
+                f"CREATE INDEX IF NOT EXISTS idx_{self.event_source_table_name}_source_event_id "
+                f"ON {self.event_source_table_name} (calendar_id, source_event_id)"
             )
             # Databases created before foreign keys were enforced can hold rows
             # whose uploaded event was already deleted.
@@ -54,12 +67,26 @@ class EventSourceDriver:
     ) -> None:
         """Does not commit; the caller owns the transaction."""
         self._connection.execute(
-            f"INSERT INTO {self.event_source_table_name} VALUES (?, ?, ?, ?, ?)",
+            f"INSERT INTO {self.event_source_table_name} "
+            "(id, uuid, websiteURL, calendar_id, sourceType, source_event_id) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
             (
                 foreign_key,
                 event_source.uuid,
                 event_source.website_url,
                 event_source.calendar_id,
                 event_source.source_type,
+                event_source.source_event_id,
             ),
+        )
+
+    def update_cached_event(
+        self, row_id: int, website_url: str, source_event_id: str | None
+    ) -> None:
+        """Does not commit; the caller owns the transaction."""
+        self._connection.execute(
+            f"""UPDATE {self.event_source_table_name}
+                SET websiteURL = ?, source_event_id = COALESCE(?, source_event_id)
+                WHERE id = ?""",
+            (website_url, source_event_id, row_id),
         )

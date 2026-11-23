@@ -33,6 +33,8 @@ class ScrapedEvent:
     resolved_address: GenericAddress | None = None
     # Needs geolocating before it is used.
     address_to_geocode: GenericAddress | None = None
+    # The source's own ID for the event, see GenericEvent.source_event_id.
+    source_id: str | None = None
 
 
 def parse_datetime(value: str | None, default_tz: str) -> datetime | None:
@@ -58,7 +60,14 @@ def parse_datetime(value: str | None, default_tz: str) -> datetime | None:
     return parsed
 
 
-_COUNTRY_TOKENS = {"us", "usa", "u.s.", "u.s.a.", "united states", "united states of america"}
+_COUNTRY_TOKENS = {
+    "us",
+    "usa",
+    "u.s.",
+    "u.s.a.",
+    "united states",
+    "united states of america",
+}
 _REGION_AND_POSTAL = re.compile(r"^([A-Za-z]{2})\.?\s+(\d{5}(?:-\d{4})?)$")
 _POSTAL = re.compile(r"^\d{5}(?:-\d{4})?$")
 _REGION = re.compile(r"^[A-Za-z]{2}$")
@@ -123,10 +132,11 @@ def hydrate_event_templates(
 ) -> list[GenericEvent]:
     """
     Copies of `event_kernel` filled in with each scraped event that starts within the
-    scrape window and hasn't already been published.
+    scrape window.
 
-    :param is_cached: Given an event's start time and title, whether it was already
-        published. Those events are skipped before the (slow) location lookup.
+    :param is_cached: Given an event's start time and title, whether to skip it.
+        The built-in scrapers don't pass one: the publisher compares every event
+        with the cache, so that changed events are updated.
     :param within_scrape_window: False when the source was already asked for only
         the events wanted, so they shouldn't be filtered again.
     """
@@ -141,6 +151,7 @@ def hydrate_event_templates(
         event = copy.deepcopy(event_kernel)
         event.title = scraped.title
         event.begins_on = begins_on
+        event.source_event_id = scraped.source_id
         event.ends_on = scraped.end.isoformat() if scraped.end else None
         if scraped.url and validators.url(scraped.url):
             event.online_address = scraped.url

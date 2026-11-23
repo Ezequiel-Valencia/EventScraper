@@ -2,7 +2,7 @@ import os
 import sqlite3
 from datetime import datetime
 
-from calendar_event_engine.db.combine_driver import CombineDBDriver
+from calendar_event_engine.db.combine_driver import CachedEvent, CombineDBDriver
 from calendar_event_engine.db.event_source_driver import EventSourceDriver, EventSource
 from calendar_event_engine.db.uploaded_events_driver import (
     UploadedEventsDriver,
@@ -69,6 +69,43 @@ class SQLiteDB:
         with self.sql_db_connection:
             primary_key = self.ue_driver.insert_uploaded_event(row_to_add)
             self.es_driver.insert_uploaded_event(primary_key, event_source)
+
+    def find_uploaded_event(
+        self,
+        calendar_id: str,
+        site: str,
+        source_event_id: str | None,
+        date: str,
+        title: str,
+    ) -> CachedEvent | None:
+        return self.com_driver.find_uploaded_event(
+            calendar_id, site, source_event_id, date, title
+        )
+
+    def update_cached_event(
+        self,
+        cached: CachedEvent,
+        row: UploadedEventRow,
+        event_source: EventSource,
+        republished: bool,
+    ) -> None:
+        """
+        Record the latest version of `cached`. Only the fields that can change are
+        written: title, date, site, content hash, website and source event ID.
+        """
+        assert row.site is not None and row.content_hash is not None
+        with self.sql_db_connection:
+            self.ue_driver.update_cached_event(
+                cached.row_id,
+                row.title,
+                row.date,
+                row.site,
+                row.content_hash,
+                republished,
+            )
+            self.es_driver.update_cached_event(
+                cached.row_id, event_source.website_url, event_source.source_event_id
+            )
 
     def select_all_from_upload_table(self) -> sqlite3.Cursor:
         return self.ue_driver.select_all_from_upload_table()

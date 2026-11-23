@@ -1,4 +1,5 @@
 import sqlite3
+from dataclasses import dataclass
 from datetime import datetime
 
 from calendar_event_engine.db.event_source_driver import EventSourceDriver
@@ -10,6 +11,30 @@ logger = create_logger_from_designated_logger(__name__)
 _UE = UploadedEventsDriver.uploaded_events_table_name
 _ES = EventSourceDriver.event_source_table_name
 _JOIN = f"{_UE} INNER JOIN {_ES} ON {_UE}.id = {_ES}.id"
+
+
+@dataclass
+class CachedEvent:
+    """
+    An event that was already published.
+
+    Args:
+        row_id: Primary key of the cached row
+        remote_id: The publishers ID for the event, used to update it
+        uuid: The publishers UUID for the event
+        site: The site it was published to, None for rows cached before sites
+            were recorded
+        content_hash: Fingerprint of the published version, None for rows cached
+            before fingerprints were recorded
+        source_event_id: The source's own ID for the event, if known
+    """
+
+    row_id: int
+    remote_id: str
+    uuid: str
+    site: str | None
+    content_hash: str | None
+    source_event_id: str | None
 
 
 class CombineDBDriver:
@@ -58,3 +83,48 @@ class CombineDBDriver:
             (date, title, calendar_id),
         )
         return bool(res.fetchone()[0])
+
+    def find_uploaded_event(
+        self,
+        calendar_id: str,
+        site: str,
+        source_event_id: str | None,
+        date: str,
+        title: str,
+    ) -> CachedEvent | None:
+        """
+        The cached row for a scraped event published to `site`, if any.
+
+        An event is first looked up by the source's own ID, which survives a change
+        of title or time. Only events that haven't started more than a day ago are
+        matched that way, so a source reusing an ID (e.g. a page URL) for a later
+        occurrence doesn't move the earlier one. Otherwise the event is looked up
+        by its start time and title, as older caches and sources without IDs require.
+        Rows cached before the site was recorded match every site.
+        """
+        columns = f"""{_UE}.id, {_UE}.user_id, {_UE}.uuid, {_UE}.site,
+            {_UE}.content_hash, {_ES}.source_event_id"""
+        site_matches = f"({_UE}.site IS NULL OR {_UE}.site = ?)"
+        # Prefer the row recorded for this very site over a legacy one.
+        order = f"ORDER BY {_UE}.site IS NULL, {_UE}.id DESC LIMIT 1"
+
+        fetched = None
+        if source_event_id is not None:
+            fetched = self._connection.execute(
+                f"""SELECT {columns} FROM {_JOIN}
+                    WHERE calendar_id = ? AND source_event_id = ? AND {site_matches}
+                    AND datetime(date) >= datetime('now', '-1 day')
+                    {order}""",
+                (calendar_id, source_event_id, site),
+            ).fetchone()
+        if fetched is None:
+            fetched = self._connection.execute(
+                f"""SELECT {columns} FROM {_JOIN}
+                    WHERE calendar_id = ? AND date = ? AND title = ? AND {site_matches}
+                    AND (source_event_id IS NULL OR source_event_id = ?)
+                    {order}""",
+                (calendar_id, date, title, site, source_event_id),
+            ).fetchone()
+        if fetched is None:
+            return None
+        return CachedEvent(*fetched)

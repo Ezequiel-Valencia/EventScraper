@@ -1,4 +1,3 @@
-import functools
 from collections.abc import Callable
 from datetime import datetime, timezone
 
@@ -45,11 +44,7 @@ class ICALScraper(Scraper):
         for ical_id in group_event_kernel.calendar_ids:
             calendar = icalendar.Calendar.from_ical(fetch_text(ical_id))
             events = _hydrate_event_template(
-                calendar,
-                group_event_kernel.event_template,
-                is_cached=functools.partial(
-                    self.cache_db.entry_already_in_cache, source_id=ical_id
-                ),
+                calendar, group_event_kernel.event_template
             )
             all_events.append(AllEventsFromAGroup(events, group_event_kernel, ical_id))
 
@@ -65,6 +60,17 @@ def _as_datetime(value) -> datetime:
     return datetime.combine(value, datetime.min.time(), timezone.utc)
 
 
+def _source_id(event: icalendar.Event) -> str | None:
+    """The event's UID, plus the occurrence it overrides for a recurring event."""
+    uid = event.get("UID")
+    if not uid:
+        return None
+    recurrence_id = event.get("RECURRENCE-ID")
+    if recurrence_id is None:
+        return str(uid)
+    return f"{uid}#{_as_datetime(recurrence_id.dt).isoformat()}"
+
+
 def _hydrate_event_template(
     calendar: Calendar,
     event_kernel: GenericEvent,
@@ -73,8 +79,7 @@ def _hydrate_event_template(
     """
     Confirmed events within the scrape window, filled into copies of `event_kernel`.
 
-    :param is_cached: Given an event's start time and title, whether it was already
-        published. Those events are skipped before the (slow) location lookup.
+    :param is_cached: Given an event's start time and title, whether to skip it.
     """
     scraped: list[ScrapedEvent] = []
     for event in calendar.events:
@@ -96,6 +101,7 @@ def _hydrate_event_template(
                 url=str(event.get("URL")) if "URL" in event else None,
                 picture=str(event.get("ATTACH", "")) or None,
                 address_to_geocode=address_to_geocode,
+                source_id=_source_id(event),
             )
         )
     return hydrate_event_templates(scraped, event_kernel, is_cached)

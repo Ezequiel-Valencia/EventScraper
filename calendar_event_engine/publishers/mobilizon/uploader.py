@@ -1,5 +1,6 @@
 import json
 import os
+from urllib.parse import urlparse
 
 import validators
 
@@ -29,6 +30,9 @@ class MobilizonUploader(Publisher):
         email: Login email. Defaults to MOBILIZON_EMAIL, then MOBILIZON_LOGIN_FILE.
         password: Login password. Defaults to MOBILIZON_PASSWORD, then
             MOBILIZON_LOGIN_FILE.
+        site_name: Recorded as the site each event was published to, e.g.
+            "ctgrassroots". Defaults to the endpoint's host name. When publishers
+            are routed, their names are recorded instead.
     """
 
     mobilizonAPI: MobilizonAPI | None
@@ -41,12 +45,14 @@ class MobilizonUploader(Publisher):
         endpoint: str | None = None,
         email: str | None = None,
         password: str | None = None,
+        site_name: str | None = None,
     ):
         super().__init__(cache_db, logger)
         self.testMode = test_mode
         self.endpoint = endpoint
         self.email = email
         self.password = password
+        self._site_name = site_name
         self.mobilizonAPI = None
         self._fake_uuid_for_tests = 0
 
@@ -66,8 +72,30 @@ class MobilizonUploader(Publisher):
             raise RuntimeError("MobilizonUploader.connect() must be called first")
         return self.mobilizonAPI
 
-    def update(self) -> None:
-        pass
+    @property
+    def site_name(self) -> str:
+        if self._site_name is not None:
+            return self._site_name
+        endpoint = self.endpoint or os.environ.get("MOBILIZON_ENDPOINT")
+        host = urlparse(endpoint).hostname if endpoint else None
+        return host or "mobilizon"
+
+    def update_individual_event(
+        self, remote_event_id: str, event_to_update: GenericEvent
+    ) -> dict:
+        event: MobilizonEvent = self.generic_event_converter(event_to_update)
+        if self.testMode:
+            return {"id": remote_event_id}
+        self._attach_picture(event, event_to_update)
+        return self._api().update_event(remote_event_id, event)
+
+    def _attach_picture(self, event: MobilizonEvent, generic: GenericEvent) -> None:
+        picture_url = generic.picture
+        if picture_url is not None and validators.url(picture_url):
+            # On failure the event keeps its default picture (if any).
+            media_uuid = self._api().upload_file(picture_url)
+            if media_uuid is not None:
+                event.picture = EventParameters.MediaInput(mediaUuid=media_uuid)
 
     def monitor(self) -> None:
         pass
@@ -81,12 +109,7 @@ class MobilizonUploader(Publisher):
                 "uuid": self._fake_uuid_for_tests,
                 "groupId": event.attributedToId,
             }
-        picture_url = event_to_upload.picture
-        if picture_url is not None and validators.url(picture_url):
-            # On failure the event keeps its default picture (if any).
-            media_uuid = self._api().upload_file(picture_url)
-            if media_uuid is not None:
-                event.picture = EventParameters.MediaInput(mediaUuid=media_uuid)
+        self._attach_picture(event, event_to_upload)
         upload_response = self._api().create_event(event)
         upload_response["groupId"] = event.attributedToId
         return upload_response

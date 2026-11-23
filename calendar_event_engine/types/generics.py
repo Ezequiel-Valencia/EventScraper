@@ -66,6 +66,10 @@ class GenericEvent:
     """
     Object used to store event related information.
     Times are ISO 8601 strings that include a UTC offset.
+
+    `source_event_id` is the source's own ID for the event (e.g. an iCal UID). It
+    lets a changed title or time update the published event rather than publish a
+    new one. Without it an event is recognised by its title and start time.
     """
 
     publisher_specific_info: dict
@@ -77,6 +81,7 @@ class GenericEvent:
     phone_address: str | None = None
     physical_address: GenericAddress | None = None
     picture: str | None = None
+    source_event_id: str | None = None
 
     def fuzzy_equal(self, other: "GenericEvent") -> bool:
         """Equal apart from the description and the address' coordinates."""

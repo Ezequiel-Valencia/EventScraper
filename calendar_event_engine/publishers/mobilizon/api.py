@@ -120,6 +120,14 @@ class MobilizonAPI:
         created = self._execute(gqlr.create_event(variables), variables)["createEvent"]
         return {"id": created["id"], "uuid": created["uuid"]}
 
+    def update_event(self, event_id: str, event: MobilizonEvent) -> dict:
+        variables = event.to_gql_variables()
+        # The organizer stays whoever created the event.
+        variables.pop("organizerActorId", None)
+        variables["eventId"] = event_id
+        updated = self._execute(gqlr.update_event(variables), variables)["updateEvent"]
+        return {"id": updated["id"], "uuid": updated["uuid"]}
+
     def delete_event(self, event_id: str) -> str:
         return self._execute(gqlr.DELETE_EVENT, {"eventId": event_id})["deleteEvent"][
             "id"

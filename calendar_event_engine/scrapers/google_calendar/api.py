@@ -82,7 +82,7 @@ class GCalAPI:
         self,
         eventKernel: GenericEvent,
         calendarId: str,
-        checkCacheFunction,
+        checkCacheFunction=None,
         dateOfLastEventScraped: datetime | None = None,
     ) -> list[GenericEvent]:
         """Get events all events for that specific calender a week from today.
@@ -133,8 +133,12 @@ class GCalAPI:
             return hydrate_event_templates(
                 scraped,
                 eventKernel,
-                is_cached=lambda start, title: checkCacheFunction(
-                    start, title, calendarId
+                is_cached=(
+                    None
+                    if checkCacheFunction is None
+                    else lambda start, title: checkCacheFunction(
+                        start, title, calendarId
+                    )
                 ),
                 within_scrape_window=False,
             )
@@ -163,6 +167,8 @@ def _to_scraped_event(
         # Unparseable or missing locations fall back to the default, flagged as unverified.
         address_to_geocode=parse_address_string(googleEvent.get("location"))
         or default_address,
+        # With singleEvents, each occurrence of a recurring event has its own ID.
+        source_id=googleEvent.get("id"),
     )
 
 

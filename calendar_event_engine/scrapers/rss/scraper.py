@@ -8,7 +8,6 @@ either of the common event extensions:
   - xCal: xCal:dtstart, xCal:dtend, xCal:location
 """
 
-import functools
 import xml.etree.ElementTree as ET
 from collections.abc import Callable
 
@@ -38,6 +37,7 @@ _EV = "{http://purl.org/rss/1.0/modules/event/}"
 _XCAL = "{urn:ietf:params:xml:ns:xcal}"
 _CONTENT = "{http://purl.org/rss/1.0/modules/content/}"
 _MEDIA = "{http://search.yahoo.com/mrss/}"
+_RDF = "{http://www.w3.org/1999/02/22-rdf-syntax-ns#}"
 
 
 class RSSScraper(Scraper):
@@ -62,13 +62,7 @@ class RSSScraper(Scraper):
         logger.info(f"Getting events from feed {event_kernel.group_name}")
         all_events: list[AllEventsFromAGroup] = []
         for feed_url in event_kernel.calendar_ids:
-            events = parse_feed(
-                fetch_text(feed_url),
-                event_kernel.event_template,
-                is_cached=functools.partial(
-                    self.cache_db.entry_already_in_cache, source_id=feed_url
-                ),
-            )
+            events = parse_feed(fetch_text(feed_url), event_kernel.event_template)
             all_events.append(AllEventsFromAGroup(events, event_kernel, feed_url))
         return all_events
 
@@ -151,4 +145,7 @@ def _parse_item(
         address_to_geocode=None
         if location is None
         else parse_address_string(location) or default_address,
+        source_id=_text(item, "guid", f"{_ATOM}id")
+        or item.get(f"{_RDF}about")
+        or _link(item),
     )
